@@ -1,6 +1,6 @@
 # ZephyrCraft Panel 2 
 
-![]("https://raw.githubusercontent.com/Litezero/ZephyrCraft-Panel-2/blob/main/LOGO.png")
+[![GitHub Stats](https://github-readme-stats.vercel.app/api?username=litezero&repo=ZephyrCraft-Panel-2&show_icons=true&theme=radical)](https://github.com/litezero/ZephyrCraft-Panel-2)
 
 ### 轻若微风
 
