@@ -1,9 +1,7 @@
-# ZeroClear-Panel2
+# ZephyrCraft Panel 2 
 
 
-## 使用C++开发的Minecraft服务端管理面板
-
-> 目前仅支持BDS+LeviLamina（
+### 轻若微风
 
 ⚠前排提示：此项目是一个新人主导开发的，代码中可能包括但不限于：
 
