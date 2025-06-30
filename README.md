@@ -1,6 +1,6 @@
 # ZephyrCraft Panel 2 
 
-[![GitHub Stats](https://raw.githubusercontent.com/Litezero/ZephyrCraft-Panel-2/main/LOGO.png)
+![ZephyrCraft-Panel-2](https://socialify.git.ci/Litezero/ZephyrCraft-Panel-2/image?font=Jost&forks=1&issues=1&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2FLitezero%2FZephyrCraft-Panel-2%2Fmain%2FLOGO.svg&name=1&owner=1&pattern=Charlie+Brown&pulls=1&stargazers=1&theme=Auto)
 
 ### 轻若微风
 
