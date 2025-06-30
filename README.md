@@ -1,6 +1,6 @@
 # ZephyrCraft Panel 2 
 
-[![]("https://raw.githubusercontent.com/Litezero/ZephyrCraft-Panel-2/blob/main/LOGO.png")
+![]("https://raw.githubusercontent.com/Litezero/ZephyrCraft-Panel-2/blob/main/LOGO.png")
 
 ### 轻若微风
 
