@@ -1,7 +1,7 @@
 # ZeroClear-Panel2
 
 
-## 使用C++开发的MineCraft服务端管理面板
+## 使用C++开发的Minecraft服务端管理面板
 
 > 目前仅支持BDS+LeviLamina（
 
