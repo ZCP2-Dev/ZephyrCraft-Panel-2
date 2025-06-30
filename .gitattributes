@@ -1,0 +1,37 @@
+# 自动处理行 endings
+* text=auto
+*.js text eol=lf
+*.ts text eol=lf
+*.vue text eol=lf
+*.html text eol=lf
+*.css text eol=lf
+*.scss text eol=lf
+*.json text eol=lf
+*.md text eol=lf
+*.go text eol=lf
+*.sh text eol=lf
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.svg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
+*.eot binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.tar binary
+*.map binary
+*.sh executable
+package-lock.json diff=json
+node_modules/ linguist-vendored
+dist/ linguist-vendored
+public/ linguist-vendored
+yarn.lock linguist-vendored
+package-lock.json linguist-vendored
+*.vue linguist-language=Vue
+*.go linguist-language=Go
+```
