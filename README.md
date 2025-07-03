@@ -1,6 +1,6 @@
 # ZephyrCraft Panel 2 
 
-![ZephyrCraft-Panel-2](https://socialify.git.ci/Litezero/ZephyrCraft-Panel-2/image?font=JetBrains+Mono&forks=1&issues=1&language=1&logo=https%3A%2F%2Fraw.githubusercontent.com%2FLitezero%2FZephyrCraft-Panel-2%2Frefs%2Fheads%2Fmain%2FLOGO.svg&name=1&owner=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Auto)
+![ZephyrCraft-Panel-2](https://socialify.git.ci/Litezero/ZephyrCraft-Panel-2/image?custom_description=%E4%BD%BF%E7%94%A8golang%26vue3%E5%BC%80%E5%8F%91%E7%9A%84Minecraft%E6%9C%8D%E5%8A%A1%E5%99%A8%E7%AE%A1%E7%90%86%E9%9D%A2%E6%9D%BF&description=1&font=Inter&forks=1&issues=1&logo=https%3A%2F%2Fimg.picui.cn%2Ffree%2F2025%2F07%2F03%2F68663fe6cd317.png&name=1&owner=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Auto)
 
 ### 轻若微风
 
