@@ -95,7 +95,6 @@ func sendMessage(conn *websocket.Conn, msg Message) {
 	}
 }
 
-// 发送错误消息
 func sendError(conn *websocket.Conn, errMsg string) {
 	sendMessage(conn, Message{Error: errMsg})
 }
