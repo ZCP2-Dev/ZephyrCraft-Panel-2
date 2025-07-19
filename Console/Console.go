@@ -2,6 +2,7 @@ package main
 
 import (
 	"bufio"
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -11,8 +12,15 @@ import (
 )
 
 var isDebug bool
+var config Config
 
-// 定义消息结构
+// 定义配置结构
+type Config struct {
+	Port       string `json:"port"`
+	ServerPath string `json:"ServerPath"`
+}
+
+// 定义与前端链接发送消息的结构
 type Message struct {
 	Command string `json:"command"`
 	Output  string `json:"output"`
@@ -24,6 +32,22 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin: func(r *http.Request) bool { return true }, // 生产环境需限制来源
 }
 
+// 读取配置文件
+func readConfig() Config {
+	file, err := os.Open(".\\Panel_Setting\\config.json")
+	if err != nil {
+		log.Fatalf("[ERR]无法打开配置文件: %v", err)
+	}
+	defer file.Close()
+
+	var config Config
+	err = json.NewDecoder(file).Decode(&config)
+	if err != nil {
+		log.Fatalf("[ERR]无法解析配置文件: %v", err)
+	}
+	return config
+}
+
 func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// 升级为WebSocket连接
 	conn, err := upgrader.Upgrade(w, r, nil)
@@ -32,13 +56,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+
 	var cmd *exec.Cmd
 	// 启动控制台程序(默认为bedrock_server.exe)
-	if isDebug {
-		cmd = exec.Command(`D:\LiteZero_Project\ZephyrCraft-Panel-2\test\bedrock_server.exe`) //调试用路径
-	} else {
-		cmd = exec.Command(`.\bedrock_server.exe`)
-	}
+	cmd = exec.Command(config.ServerPath)
 
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
@@ -110,10 +131,11 @@ func main() {
 	if isDebug {
 		log.Println("[ZephyCraft-Panel-2]现正于调试模式下运行")
 	}
+	config = readConfig() //读取配置
 	// 注册WebSocket路由
 	http.HandleFunc("/ws", handleWebSocket)
 
 	// 启动HTTP服务
-	log.Println("[ZephyCraft-Panel-2]websocket服务于端口1145上启动")
-	log.Fatal(http.ListenAndServe(":1145", nil))
+	log.Println("[ZephyCraft-Panel-2]websocket服务于端口" + config.Port + "上启动")
+	log.Fatal(http.ListenAndServe(config.Port, nil))
 }
