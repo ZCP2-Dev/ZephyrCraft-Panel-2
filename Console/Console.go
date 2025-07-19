@@ -33,9 +33,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 	defer conn.Close()
 	var cmd *exec.Cmd
-	// 启动控制台程序（示例为bash，可替换为目标程序）
+	// 启动控制台程序(默认为bedrock_server.exe)
 	if isDebug {
-		cmd = exec.Command(`D:\LiteZero_Project\ZephyrCraft-Panel-2\test\bedrock_server.exe`)
+		cmd = exec.Command(`D:\LiteZero_Project\ZephyrCraft-Panel-2\test\bedrock_server.exe`) //调试用路径
 	} else {
 		cmd = exec.Command(`.\bedrock_server.exe`)
 	}
@@ -108,13 +108,12 @@ func sendError(conn *websocket.Conn, errMsg string) {
 func main() {
 	isDebug = os.Getenv("DEBUG") == "1"
 	if isDebug {
-		log.Println("程序正在调试模式下运行")
-		// 调试相关的配置或日志
+		log.Println("[ZephyCraft-Panel-2]现正于调试模式下运行")
 	}
 	// 注册WebSocket路由
 	http.HandleFunc("/ws", handleWebSocket)
 
 	// 启动HTTP服务
-	log.Println("服务启动在 :1145")
+	log.Println("[ZephyCraft-Panel-2]websocket服务于端口1145上启动")
 	log.Fatal(http.ListenAndServe(":1145", nil))
 }
