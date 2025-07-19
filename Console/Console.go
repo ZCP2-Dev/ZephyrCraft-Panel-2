@@ -32,12 +32,12 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
-
+	var cmd *exec.Cmd
 	// 启动控制台程序（示例为bash，可替换为目标程序）
 	if isDebug {
-		cmd := exec.Command(`D:\LiteZero_Project\ZephyrCraft-Panel-2\test\bedrock_server.exe`)
+		cmd = exec.Command(`D:\LiteZero_Project\ZephyrCraft-Panel-2\test\bedrock_server.exe`)
 	} else {
-		cmd := exec.Command(`.\bedrock_server.exe`)
+		cmd = exec.Command(`.\bedrock_server.exe`)
 	}
 
 	stdout, err := cmd.StdoutPipe()
@@ -106,7 +106,7 @@ func sendError(conn *websocket.Conn, errMsg string) {
 }
 
 func main() {
-	isDebug := os.Getenv("DEBUG") == "1"
+	isDebug = os.Getenv("DEBUG") == "1"
 	if isDebug {
 		log.Println("程序正在调试模式下运行")
 		// 调试相关的配置或日志
