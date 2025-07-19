@@ -10,3 +10,6 @@
 
 2.毫无章法格式的代码
 
+此项目中使用了一些其他的开源项目成果，在下方已标出以表示感谢：
+
+github.com/gorilla/websocket用于在golang中实现websocket链接

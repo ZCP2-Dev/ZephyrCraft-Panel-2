@@ -2,11 +2,9 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"log"
 	"net/http"
 	"os/exec"
-	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -33,7 +31,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close()
 
 	// 启动控制台程序（示例为bash，可替换为目标程序）
-	cmd := exec.Command("bash")
+	cmd := exec.Command(`D:\LiteZero_Project\ZephyrCraft-Panel-2\test\bedrock_server.exe`)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		sendError(conn, "启动进程失败: "+err.Error())
@@ -77,7 +75,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			log.Printf("读取WebSocket消息失败: %v", err)
 			return
 		}
-		
+
 		// 发送命令到控制台
 		cmdStr := msg.Command + "\n"
 		_, err = stdin.Write([]byte(cmdStr))
@@ -102,8 +100,8 @@ func sendError(conn *websocket.Conn, errMsg string) {
 func main() {
 	// 注册WebSocket路由
 	http.HandleFunc("/ws", handleWebSocket)
-	
+
 	// 启动HTTP服务
-	log.Println("服务启动在 :8080")
-	log.Fatal(http.ListenAndServe(":8080", nil))
+	log.Println("服务启动在 :1145")
+	log.Fatal(http.ListenAndServe(":1145", nil))
 }
