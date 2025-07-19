@@ -4,10 +4,13 @@ import (
 	"bufio"
 	"log"
 	"net/http"
+	"os"
 	"os/exec"
 
 	"github.com/gorilla/websocket"
 )
+
+var isDebug bool
 
 // 定义消息结构
 type Message struct {
@@ -25,27 +28,32 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// 升级为WebSocket连接
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("WebSocket升级失败: %v", err)
+		log.Printf("[ERR]WebSocket升级失败: %v", err)
 		return
 	}
 	defer conn.Close()
 
 	// 启动控制台程序（示例为bash，可替换为目标程序）
-	cmd := exec.Command(`D:\LiteZero_Project\ZephyrCraft-Panel-2\test\bedrock_server.exe`)
+	if isDebug {
+		cmd := exec.Command(`D:\LiteZero_Project\ZephyrCraft-Panel-2\test\bedrock_server.exe`)
+	} else {
+		cmd := exec.Command(`.\bedrock_server.exe`)
+	}
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
-		sendError(conn, "启动进程失败: "+err.Error())
+		sendError(conn, "[ERR]启动进程失败: "+err.Error())
 		return
 	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
-		sendError(conn, "创建输入管道失败: "+err.Error())
+		sendError(conn, "[ERR]创建输入管道失败: "+err.Error())
 		return
 	}
 
 	// 启动进程
 	if err := cmd.Start(); err != nil {
-		sendError(conn, "启动进程失败: "+err.Error())
+		sendError(conn, "[ERR]启动进程失败: "+err.Error())
 		return
 	}
 	defer cmd.Process.Kill() // 连接关闭时终止进程
@@ -59,7 +67,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				if err == nil { // 进程正常结束
 					sendMessage(conn, Message{Output: "进程已结束"})
 				} else {
-					sendError(conn, "读取输出失败: "+err.Error())
+					sendError(conn, "[ERR]读取输出失败: "+err.Error())
 				}
 				return
 			}
@@ -72,7 +80,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		var msg Message
 		err := conn.ReadJSON(&msg)
 		if err != nil {
-			log.Printf("读取WebSocket消息失败: %v", err)
+			log.Printf("[ERR]读取WebSocket消息失败: %v", err)
 			return
 		}
 
@@ -80,7 +88,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		cmdStr := msg.Command + "\n"
 		_, err = stdin.Write([]byte(cmdStr))
 		if err != nil {
-			sendError(conn, "发送命令失败: "+err.Error())
+			sendError(conn, "[ERR]发送命令失败: "+err.Error())
 			return
 		}
 	}
@@ -89,7 +97,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 // 发送消息到前端
 func sendMessage(conn *websocket.Conn, msg Message) {
 	if err := conn.WriteJSON(msg); err != nil {
-		log.Printf("发送消息失败: %v", err)
+		log.Printf("[ERR]发送消息失败: %v", err)
 	}
 }
 
@@ -98,6 +106,11 @@ func sendError(conn *websocket.Conn, errMsg string) {
 }
 
 func main() {
+	isDebug := os.Getenv("DEBUG") == "1"
+	if isDebug {
+		log.Println("程序正在调试模式下运行")
+		// 调试相关的配置或日志
+	}
 	// 注册WebSocket路由
 	http.HandleFunc("/ws", handleWebSocket)
 
