@@ -36,14 +36,14 @@ var upgrader = websocket.Upgrader{
 func readConfig() Config {
 	file, err := os.Open(".\\Panel_Setting\\config.json")
 	if err != nil {
-		log.Fatalf("[ERR]无法打开配置文件: %v", err)
+		log.Fatalf("[ERROR]错误：%v，无法打开配置文件", err)
 	}
 	defer file.Close()
 
 	var config Config
 	err = json.NewDecoder(file).Decode(&config)
 	if err != nil {
-		log.Fatalf("[ERR]无法解析配置文件: %v", err)
+		log.Fatalf("[ERROR]错误：%v，无法解析配置文件", err)
 	}
 	return config
 }
@@ -52,15 +52,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// 升级为WebSocket连接
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("[ERR]WebSocket升级失败: %v", err)
+		log.Printf("[ERROR]错误： %v，WebSocket链接升级失败", err)
 		return
 	}
 	defer conn.Close()
 
-	var cmd *exec.Cmd
 	// 启动控制台程序(默认为bedrock_server.exe)
-	cmd = exec.Command(config.ServerPath)
 
+	cmd := exec.Command(config.ServerPath)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		sendError(conn, "[ERR]启动进程失败: "+err.Error())
