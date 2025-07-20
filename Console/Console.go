@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 
+	// 引入WebSocket库
 	"github.com/gorilla/websocket"
 )
 
@@ -36,14 +37,14 @@ var upgrader = websocket.Upgrader{
 func readConfig() Config {
 	file, err := os.Open(".\\Panel_Setting\\config.json")
 	if err != nil {
-		log.Fatalf("[ERROR]错误：%v，无法打开配置文件", err)
+		log.Fatalf("[ERR]无法打开配置文件: %v", err)
 	}
 	defer file.Close()
 
 	var config Config
 	err = json.NewDecoder(file).Decode(&config)
 	if err != nil {
-		log.Fatalf("[ERROR]错误：%v，无法解析配置文件", err)
+		log.Fatalf("[ERR]无法解析配置文件: %v", err)
 	}
 	return config
 }
@@ -52,14 +53,15 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	// 升级为WebSocket连接
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("[ERROR]错误： %v，WebSocket链接升级失败", err)
+		log.Printf("[ERR]WebSocket升级失败: %v", err)
 		return
 	}
 	defer conn.Close()
 
 	// 启动控制台程序(默认为bedrock_server.exe)
 
-	cmd := exec.Command(config.ServerPath)
+	cmd := exec.Command(".\\Panel_Setting\\pty-proxy.exe", config.ServerPath)
+
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		sendError(conn, "[ERR]启动进程失败: "+err.Error())
@@ -92,6 +94,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			sendMessage(conn, Message{Output: line})
+			if isDebug {
+				log.Printf(("[ConsoleOUT]%s"), line)
+			}
 		}
 	}()
 
@@ -105,7 +110,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// 发送命令到控制台
-		cmdStr := msg.Command + "\n"
+		if isDebug {
+			log.Printf("[ConsoleIN]前端输入命令：%s", msg.Command)
+		}
+		cmdStr := msg.Command + "\r\n"
 		_, err = stdin.Write([]byte(cmdStr))
 		if err != nil {
 			sendError(conn, "[ERR]发送命令失败: "+err.Error())
