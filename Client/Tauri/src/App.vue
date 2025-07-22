@@ -8,8 +8,10 @@ const command = ref("");
 
 interface Message {
   command: string;
+  content: string;
   output: string;
   error: string;
+  status: string;
 }
 
 function connect() {
@@ -31,6 +33,9 @@ function connect() {
       if (data.error) {
         receivedData.value += `错误: ${data.error}\n`;
       }
+      if (data.status) {
+        receivedData.value += `状态: ${data.status}\n`;
+      }
     } catch (err) {
       receivedData.value += `解析数据出错: ${err}\n收到原始数据: ${event.data}\n`;
     }
@@ -48,7 +53,8 @@ function connect() {
 function sendMessage() {
   if (ws.value && ws.value.readyState === WebSocket.OPEN) {
     const message = JSON.stringify({
-      command: command.value
+      command: "input",
+      content: command.value
     });
     ws.value.send(message);
     receivedData.value += `已发送命令: ${command.value}\n`;
@@ -59,6 +65,28 @@ function sendMessage() {
 function disconnect() {
   if (ws.value) {
     ws.value.close();
+  }
+}
+
+function startProcess() {
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    const message = JSON.stringify({
+      command: "start",
+      content: ""
+    });
+    ws.value.send(message);
+    receivedData.value += `已发送启动命令\n`;
+  }
+}
+
+function stopProcess() {
+  if (ws.value && ws.value.readyState === WebSocket.OPEN) {
+    const message = JSON.stringify({
+      command: "stop",
+      content: ""
+    });
+    ws.value.send(message);
+    receivedData.value += `已发送停止命令\n`;
   }
 }
 </script>
@@ -75,6 +103,8 @@ function disconnect() {
       />
       <button @click="connect" class="btn">连接</button>
       <button @click="disconnect" class="btn">断开连接</button>
+      <button @click="startProcess" class="btn">启动进程</button>
+      <button @click="stopProcess" class="btn">停止进程</button>
     </div>
 
     <div class="message-receiver">
@@ -224,8 +254,6 @@ button {
   outline: none;
 }
 
-
-
 @media (prefers-color-scheme: dark) {
   :root {
     color: #f6f6f6;
@@ -245,5 +273,4 @@ button {
     background-color: #0f0f0f69;
   }
 }
-
 </style>
