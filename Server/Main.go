@@ -90,6 +90,9 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		}
 
 		// 根据消息的 Command 字段，分情况处理
+		if isDebug {
+			log.Printf("[Main][DEBUG]收到前端命令，类型: %s, 内容: %s", msg.Command, msg.Content) // 如果是调试模式，记录收到的命令和内容
+		}
 		switch msg.Command {
 		case "start":
 			// 处理启动命令，调用进程管理器的 StartProcess 方法
@@ -98,7 +101,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 		case "stop":
 			// 处理停止命令，调用进程管理器的 StopProcess 方法
-			if err := pm.StopProcess(); err != nil {
+			if err := pm.SendCommand("stop"); err != nil {
 				sendError(conn, "[ERROR]停止进程失败: "+err.Error())
 			}
 		case "input":

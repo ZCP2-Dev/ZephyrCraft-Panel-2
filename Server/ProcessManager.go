@@ -92,7 +92,9 @@ func (pm *ProcessManager) StopProcess() error {
 func (pm *ProcessManager) SendCommand(command string) error {
 	pm.mu.Lock()         // 加锁，避免并发写标准输入
 	defer pm.mu.Unlock() // 函数结束自动解锁
-
+	if isDebug {
+		log.Printf("[ProcessManager][DEBUG]发送命令到控制台: %s", command) // 如果是调试模式，记录发送的命令
+	}
 	// 进程未运行或者标准输入管道为空，无法发命令，直接返回
 	if !pm.running || pm.stdin == nil {
 		return nil
@@ -130,7 +132,9 @@ func (pm *ProcessManager) sendMessage(msg Message) {
 	if pm.conn == nil {
 		return
 	}
-
+	if isDebug {
+		log.Printf("[ProcessManager][DEBUG]发送消息到前端: %s", msg) // 如果是调试模式，记录发送的消息内容
+	}
 	// 尝试通过 WebSocket 连接发送 JSON 格式消息
 	if err := pm.conn.WriteJSON(msg); err != nil {
 		// 发送失败，记录错误日志
