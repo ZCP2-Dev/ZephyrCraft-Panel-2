@@ -10,6 +10,15 @@
 
 2.毫无章法格式的代码
 
+### 仓库结构说明
+
+文件夹名称|作用|主要使用的编程语言
+:---:|:---:|:---:
+[Client](https://github.com/Litezero/ZephyrCraft-Panel-2/tree/main/Client/Tauri)|用于存放前端（客户端）项目的相关文件|[![-](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)]() [![-](https://img.shields.io/badge/Vue-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)]() 
+[Server](https://github.com/Litezero/ZephyrCraft-Panel-2/tree/main/Server)|用于存放后端（服务端）项目的相关文件|[![-](https://img.shields.io/badge/Golang-00ADD8?style=flat-square&logo=go&logoColor=white)]() 
+Docs|（筹备中，可能取消）存储项目文档|[![-](https://img.shields.io/badge/Markdown-000000?style=flat-square&logo=markdown&logoColor=white)]() 
+
+### Credits
 此项目中使用了一些其他的开源项目成果，在下方已标出以表示感谢：
 
 [https://github.com/gorilla/websocket](https://github.com/gorilla/websocket) 用于在golang中实现websocket链接操作
