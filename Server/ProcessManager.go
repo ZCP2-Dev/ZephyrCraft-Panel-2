@@ -130,9 +130,7 @@ func (pm *ProcessManager) readOutput() {
 func (pm *ProcessManager) sendMessage(msg Message) {
 	// WebSocket 连接为空，无法发送，直接返回
 	if pm.conn != nil {
-		if isDebug {
-			log.Printf("[ProcessManager][DEBUG]发送消息到前端: %s", msg) // 如果是调试模式，记录发送的消息内容
-		}
+		log.Printf("%s", msg) // 记录发送的消息内容
 		// 尝试通过 WebSocket 连接发送 JSON 格式消息
 		if err := pm.conn.WriteJSON(msg); err != nil {
 			// 发送失败，记录错误日志
@@ -140,7 +138,7 @@ func (pm *ProcessManager) sendMessage(msg Message) {
 		}
 	}
 }
-func (pm *ProcessManager) UpdateConnection(conn *websocket.Conn) {
+func (pm *ProcessManager) UpdateConnection(conn *websocket.Conn) { // 在重连时，更新 WebSocket 连接，以便后续消息能够正确发送
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 	pm.conn = conn
