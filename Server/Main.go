@@ -72,7 +72,8 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	defer conn.Close() // 函数结束前关闭 WebSocket 连接
 
 	// 创建进程管理器实例，传入 WebSocket 连接用于交互
-	pm := NewProcessManager(conn)
+	pm := getProcessManager()
+	pm.UpdateConnection(conn)
 
 	// 持续处理前端发送的消息
 	for {
@@ -83,9 +84,10 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			// 读取失败时记录错误日志并返回，终止循环
 			if websocket.IsCloseError(err, websocket.CloseNoStatusReceived) {
 				log.Printf("[WARN]前端已主动退出连接") //如果是前端主动关闭连接，则不记录错误
-				return
+			} else {
+				log.Printf("[ERROR]读取WebSocket消息失败: %v", err) // 其他错误记录日志
 			}
-			log.Printf("[ERROR]读取WebSocket消息失败: %v", err)
+			pm.UpdateConnection(nil) // 清空连接
 			return
 		}
 
@@ -113,6 +115,14 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+var globalProcessManager *ProcessManager
+
+func getProcessManager() *ProcessManager {
+	if globalProcessManager == nil {
+		globalProcessManager = NewProcessManager(nil)
+	}
+	return globalProcessManager
+}
 func main() {
 	// 根据环境变量 DEBUG 是否为 "1"，设置调试模式标记
 	isDebug = os.Getenv("DEBUG") == "1"
