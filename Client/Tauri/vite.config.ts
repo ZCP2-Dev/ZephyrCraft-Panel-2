@@ -1,12 +1,26 @@
 import { defineConfig } from "vite";
 import vue from "@vitejs/plugin-vue";
+import Icons from 'unplugin-icons/vite';
+import IconsResolver from 'unplugin-icons/resolver';
+import Components from 'unplugin-vue-components/vite';
 
 // @ts-expect-error process is a nodejs global
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
-  plugins: [vue()],
+export default defineConfig({
+  plugins: [
+    vue(),
+    Components({
+      resolvers: [
+        IconsResolver({
+          prefix: 'Icon',
+          enabledCollections: ['mdi'],
+        }),
+      ],
+    }),
+    Icons({ autoInstall: true }),
+  ],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //

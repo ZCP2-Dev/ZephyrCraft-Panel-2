@@ -62,6 +62,9 @@ func (pm *ProcessManager) StartProcess(serverPath string) error {
 
 	pm.running = true // 标记进程已启动运行
 
+	// 启动成功后推送 running 状态
+	pm.sendMessage(Message{Status: "running"})
+
 	// 异步启动一个 goroutine 读取进程输出，避免阻塞当前逻辑
 	go pm.readOutput()
 
@@ -84,7 +87,9 @@ func (pm *ProcessManager) StopProcess() error {
 	}
 
 	pm.running = false // 标记进程已停止
-	return nil         // 停止成功，返回 nil
+	// 停止后推送 stopped 状态
+	pm.sendMessage(Message{Status: "stopped"})
+	return nil // 停止成功，返回 nil
 }
 
 // SendCommand 向进程发送命令
@@ -117,6 +122,8 @@ func (pm *ProcessManager) readOutput() {
 		if err != nil {
 			// 读取出错（比如进程退出、管道断开等），停止进程并返回
 			pm.StopProcess()
+			// 进程异常退出时推送 stopped 状态
+			pm.sendMessage(Message{Status: "stopped"})
 			return
 		}
 
