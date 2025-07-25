@@ -1,6 +1,6 @@
 # ZephyrCraft Panel 2 
 
-![ZephyrCraft-Panel-2](https://socialify.git.ci/Litezero/ZephyrCraft-Panel-2/image?description=1&font=Inter&forks=1&issues=1&logo=https%3A%2F%2Fooo.0x0.ooo%2F2025%2F07%2F25%2FOYYVSK.png&name=1&owner=1&pattern=Floating+Cogs&pulls=1&stargazers=1&theme=Auto)
+![ZephyrCraft-Panel-2](https://socialify.git.ci/Litezero/ZephyrCraft-Panel-2/image?description=1&font=Inter&forks=1&issues=1&logo=https%3A%2F%2Fooo.0x0.ooo%2F2025%2F07%2F25%2FOYYVSK.png&name=1&owner=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Auto)
 ### 轻若微风
 
 ⚠前排提示：此项目是一个新人主导开发的，代码中可能包括但不限于：
