@@ -128,40 +128,97 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 			xuid = matches[2]
 		}
 
+		if isDebug {
+			log.Printf("[调试] 匹配到玩家连接: 玩家名=%s, XUID=%s", playerName, xuid)
+		}
+
 		if xuid != "" {
+			if isDebug {
+				log.Printf("[调试] 开始处理玩家 XUID: %s", xuid)
+			}
+
 			go func(name, xuid string) {
+				if isDebug {
+					log.Printf("[调试] 启动协程处理玩家 %s (XUID: %s) 的云黑查询", name, xuid)
+				}
+
 				client := &http.Client{Timeout: 5 * time.Second}
 				url := "http://uniteban.xyz:19132/api.php?xuid=" + xuid
+
+				if isDebug {
+					log.Printf("[调试] 准备请求云黑API: %s", url)
+				}
+
 				resp, err := client.Get(url)
 				if err != nil {
 					log.Printf("[Uniteban] 请求失败: %v", err)
+					if isDebug {
+						log.Printf("[调试] API请求失败，错误: %v，正常添加玩家", err)
+					}
 					pm.AddPlayer(name, xuid) // API失败，正常添加
 					return
 				}
 				defer resp.Body.Close()
+
+				if isDebug {
+					log.Printf("[调试] 云黑API响应状态码: %d", resp.StatusCode)
+				}
+
 				var result struct {
 					Exists bool   `json:"exists"`
 					Reason string `json:"reason"`
 				}
+
+				if isDebug {
+					log.Printf("[调试] 开始解析API响应JSON")
+				}
+
 				if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
 					log.Printf("[Uniteban] 解析响应失败: %v", err)
+					if isDebug {
+						log.Printf("[调试] JSON解析失败，错误: %v，正常添加玩家", err)
+					}
 					pm.AddPlayer(name, xuid) // 解析失败，正常添加
 					return
 				}
+
+				if isDebug {
+					log.Printf("[调试] 云黑API查询结果: Exists=%v, Reason=%s", result.Exists, result.Reason)
+				}
+
 				if result.Exists {
 					reason := result.Reason
 					if reason == "" {
 						reason = "云黑封禁"
 					}
+
+					if isDebug {
+						log.Printf("[调试] 玩家 %s (XUID: %s) 在云黑名单中，理由: %s", name, xuid, reason)
+					}
+
 					if config.Uniteban {
-						log.Printf("[Uniteban] 玩家 %s (XUID: %s) 命中云黑，踢出，理由: %s", name, xuid, reason)
-						pm.kickPlayer(name, reason)
+						log.Printf("[Uniteban] 玩家 %s (XUID: %s) 在云黑名单中，踢出，理由: %s", name, xuid, reason)
+						pm.kickPlayer(name, "你因为在uniteban云黑系统中因理由: "+reason+" 被踢出游戏。")
+						pm.sendMessage("[Uniteban] 玩家 %s (XUID: %s) 在云黑名单中，踢出，理由: %s", name, xuid, reason)
+
+						if isDebug {
+							log.Printf("[调试] 已执行踢人操作并发送广播")
+						}
 					} else {
-						log.Printf("[Uniteban][警告] 玩家 %s (XUID: %s) 命中云黑，但未自动踢出！", name, xuid)
+						log.Printf("[Uniteban][警告] 玩家 %s (XUID: %s) 在云黑名单中，但因配置原因未自动踢出！", name, xuid)
 						pm.AddPlayer(name, xuid+"_危险玩家(云黑)")
+						pm.sendMessage("[Uniteban][警告] 玩家 %s (XUID: %s) 在云黑名单中，但因配置原因未自动踢出！", name, xuid, "")
+
+						if isDebug {
+							log.Printf("[调试] 未执行踢人操作，已添加标记并发送警告广播")
+						}
 					}
 				} else {
 					pm.AddPlayer(name, xuid)
+
+					if isDebug {
+						log.Printf("[调试] 玩家 %s (XUID: %s) 不在云黑名单中，正常添加", name, xuid)
+					}
 				}
 			}(playerName, xuid)
 		}
@@ -243,6 +300,10 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 	}
 
 	return false
+}
+
+func (pm *PlayerManager) sendMessage(s string, name string, xuid string, reason string) {
+	panic("unimplemented")
 }
 
 // 新增kickPlayer方法

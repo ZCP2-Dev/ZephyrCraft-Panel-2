@@ -216,9 +216,9 @@ func (pm *ProcessManager) sendMessage(msg Message) {
 	// WebSocket 连接为空，无法发送，直接返回
 	if pm.conn != nil {
 		// 只记录非系统信息的消息到日志
-		if msg.Output != "" || msg.Error != "" || msg.Status != "" {
-			log.Printf("%s", msg)
-		}
+		//	if msg.Output != "" || msg.Error != "" || msg.Status != "" {
+		//		log.Printf("%s", msg)
+		//	}
 		// 尝试通过 WebSocket 连接发送 JSON 格式消息
 		if err := pm.conn.WriteJSON(msg); err != nil {
 			// 发送失败，记录错误日志
