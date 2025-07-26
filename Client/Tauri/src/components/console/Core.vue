@@ -324,12 +324,12 @@ watch(isConnected, (connected) => {
 
 <style scoped>
 .core-container {
-  background: #ffffff;
+  /* background: var(--bg-primary); */
   padding: 1.5rem;
 }
 
 .core-container h2 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 2rem;
   margin: 0 0 1.5rem 0;
@@ -337,15 +337,15 @@ watch(isConnected, (connected) => {
 }
 
 .core-section {
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .core-section h3 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.4rem;
   margin: 0 0 1.2rem 0;
@@ -359,9 +359,9 @@ watch(isConnected, (connected) => {
   align-items: center;
   margin-bottom: 1.2rem;
   padding: 0.8rem 1rem;
-  background: #ffffff;
+  background: var(--bg-primary);
   border-radius: 6px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .core-row:last-child {
@@ -371,23 +371,23 @@ watch(isConnected, (connected) => {
 .core-label {
   min-width: 120px;
   font-weight: 600;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 0.95rem;
 }
 
 .core-value {
   flex: 1;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .status-running {
-  color: #27ae60;
+  color: var(--success-color);
   font-weight: 600;
 }
 
 .status-stopped {
-  color: #e74c3c;
+  color: var(--error-color);
   font-weight: 600;
 }
 
@@ -398,7 +398,7 @@ watch(isConnected, (connected) => {
 }
 
 .core-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -409,16 +409,17 @@ watch(isConnected, (connected) => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 2px 8px var(--accent-light);
 }
 
 .core-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .core-btn:disabled {
-  background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 </style>

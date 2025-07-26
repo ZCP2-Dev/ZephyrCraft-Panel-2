@@ -16,7 +16,13 @@ declare module 'vue' {
     IconMdiAccountMultiple: typeof import('~icons/mdi/account-multiple')['default']
     IconMdiAccountRemove: typeof import('~icons/mdi/account-remove')['default']
     IconMdiAlertCircle: typeof import('~icons/mdi/alert-circle')['default']
+    IconMdiArchive: typeof import('~icons/mdi/archive')['default']
     IconMdiBackupRestore: typeof import('~icons/mdi/backup-restore')['default']
+    IconMdiCheckboxBlankOutline: typeof import('~icons/mdi/checkbox-blank-outline')['default']
+    IconMdiCheckboxMarked: typeof import('~icons/mdi/checkbox-marked')['default']
+    IconMdiCheckboxMultipleBlankOutline: typeof import('~icons/mdi/checkbox-multiple-blank-outline')['default']
+    IconMdiCheckboxMultipleMarked: typeof import('~icons/mdi/checkbox-multiple-marked')['default']
+    IconMdiCheckboxMultipleMarkedOutline: typeof import('~icons/mdi/checkbox-multiple-marked-outline')['default']
     IconMdiChip: typeof import('~icons/mdi/chip')['default']
     IconMdiCircle: typeof import('~icons/mdi/circle')['default']
     IconMdiClose: typeof import('~icons/mdi/close')['default']
@@ -64,5 +70,6 @@ declare module 'vue' {
     RouterView: typeof import('vue-router')['RouterView']
     ServerList: typeof import('./src/components/ServerList.vue')['default']
     Terminal: typeof import('./src/components/console/Terminal.vue')['default']
+    ThemeToggle: typeof import('./src/components/ThemeToggle.vue')['default']
   }
 }

@@ -69,14 +69,20 @@ if (props.section) {
   align-items: center;
   padding: 1rem 0;
   margin-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.server-header h2 {
+  color: var(--text-primary);
+  margin: 0;
 }
 
 .server-status {
-  background-color: #88bf64;
+  background: var(--accent-gradient);
   color: white;
   padding: 0.3rem 0.8rem;
   border-radius: 4px;
   font-size: 0.9rem;
+  font-weight: 500;
 }
 </style>

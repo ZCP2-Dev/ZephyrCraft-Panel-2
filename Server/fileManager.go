@@ -1,10 +1,14 @@
 package main
 
 import (
+	"archive/zip"
+	"bufio"
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -262,6 +266,181 @@ func (fm *FileManager) WriteFileRaw(path string, data []byte) error {
 		return fmt.Errorf("访问路径超出允许范围")
 	}
 	return os.WriteFile(fullPath, data, 0644)
+}
+
+// CreateZipFile 创建zip文件
+func (fm *FileManager) CreateZipFile(filesToZip []string, zipFileName string) error {
+	// 构建zip文件的完整路径
+	zipPath := filepath.Join(fm.rootPath, zipFileName)
+	if !strings.HasSuffix(zipPath, ".zip") {
+		zipPath += ".zip"
+	}
+
+	// 检查zip文件路径是否在允许范围内
+	if !strings.HasPrefix(zipPath, fm.rootPath) {
+		return fmt.Errorf("zip文件路径超出允许范围")
+	}
+
+	// 创建zip文件
+	zipFile, err := os.Create(zipPath)
+	if err != nil {
+		return fmt.Errorf("创建zip文件失败: %v", err)
+	}
+	defer zipFile.Close()
+
+	// 创建zip writer
+	zipWriter := zip.NewWriter(zipFile)
+	defer zipWriter.Close()
+
+	// 遍历要压缩的文件
+	for _, filePath := range filesToZip {
+		// 构建文件的完整路径
+		fullPath := filepath.Join(fm.rootPath, filePath)
+
+		// 检查文件路径是否在允许范围内
+		if !strings.HasPrefix(fullPath, fm.rootPath) {
+			continue // 跳过超出范围的文件
+		}
+
+		// 获取文件信息
+		fileInfo, err := os.Stat(fullPath)
+		if err != nil {
+			continue // 跳过不存在的文件
+		}
+
+		if fileInfo.IsDir() {
+			// 如果是目录，递归添加目录中的所有文件
+			err = fm.addDirectoryToZip(zipWriter, fullPath, filePath)
+			if err != nil {
+				log.Printf("添加目录到zip失败 %s: %v", filePath, err)
+			}
+		} else {
+			// 如果是文件，直接添加
+			err = fm.addFileToZip(zipWriter, fullPath, filePath)
+			if err != nil {
+				log.Printf("添加文件到zip失败 %s: %v", filePath, err)
+			}
+		}
+	}
+
+	return nil
+}
+
+// addFileToZip 添加单个文件到zip
+func (fm *FileManager) addFileToZip(zipWriter *zip.Writer, fullPath, relativePath string) error {
+	// 打开文件
+	file, err := os.Open(fullPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	// 创建zip文件条目
+	zipEntry, err := zipWriter.Create(relativePath)
+	if err != nil {
+		return err
+	}
+
+	// 复制文件内容到zip
+	_, err = io.Copy(zipEntry, file)
+	return err
+}
+
+// addDirectoryToZip 递归添加目录到zip
+func (fm *FileManager) addDirectoryToZip(zipWriter *zip.Writer, fullPath, relativePath string) error {
+	return filepath.Walk(fullPath, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// 计算相对路径
+		relPath, err := filepath.Rel(fm.rootPath, path)
+		if err != nil {
+			return err
+		}
+
+		// 跳过根目录
+		if relPath == "." {
+			return nil
+		}
+
+		if info.IsDir() {
+			// 为目录创建条目（zip需要目录条目）
+			_, err = zipWriter.Create(relPath + "/")
+			return err
+		} else {
+			// 添加文件
+			return fm.addFileToZip(zipWriter, path, relPath)
+		}
+	})
+}
+
+// 读取server.properties为map
+func (fm *FileManager) ReadServerProperties() (map[string]string, error) {
+	props := make(map[string]string)
+	propPath := filepath.Join(fm.rootPath, "server.properties")
+	file, err := os.Open(propPath)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.TrimSpace(line)
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		if idx := strings.Index(line, "="); idx != -1 {
+			key := strings.TrimSpace(line[:idx])
+			val := strings.TrimSpace(line[idx+1:])
+			props[key] = val
+		}
+	}
+	if err := scanner.Err(); err != nil {
+		return nil, err
+	}
+	return props, nil
+}
+
+// 写入server.properties（全量覆盖）
+func (fm *FileManager) WriteServerProperties(props map[string]string) error {
+	propPath := filepath.Join(fm.rootPath, "server.properties")
+	file, err := os.Create(propPath)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+	for k, v := range props {
+		if _, err := file.WriteString(k + "=" + v + "\n"); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// 获取max-players
+func (fm *FileManager) GetMaxPlayers() (int, error) {
+	props, err := fm.ReadServerProperties()
+	if err != nil {
+		return 0, err
+	}
+	val, ok := props["max-players"]
+	if !ok {
+		return 0, nil
+	}
+	return strconv.Atoi(val)
+}
+
+// 设置max-players
+func (fm *FileManager) SetMaxPlayers(n int) error {
+	props, err := fm.ReadServerProperties()
+	if err != nil {
+		return err
+	}
+	props["max-players"] = strconv.Itoa(n)
+	return fm.WriteServerProperties(props)
 }
 
 // 全局文件管理器实例

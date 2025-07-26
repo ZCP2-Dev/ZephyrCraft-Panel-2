@@ -175,13 +175,13 @@ onUnmounted(() => {
 
 <style scoped>
 .server-list-container {
-  background: #ffffff;
+  /* background: var(--bg-primary); */
   padding: 1.5rem;
   box-sizing: border-box;
 }
 
 .server-list-container h2 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 2rem;
   margin: 0 0 1.5rem 0;
@@ -197,7 +197,7 @@ onUnmounted(() => {
 }
 
 .add-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   color: white;
   border: none;
   border-radius: 8px;
@@ -206,7 +206,7 @@ onUnmounted(() => {
   font-weight: 600;
   font-size: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 2px 8px var(--accent-light);
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
@@ -228,7 +228,7 @@ onUnmounted(() => {
 }
 
 .add-btn:hover {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .cards-container {
@@ -243,14 +243,14 @@ onUnmounted(() => {
 }
 
 .server-card {
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
   border-radius: 10px;
   padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px var(--shadow-color-light);
   width: 100%;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: #ffffff;
+  background: var(--bg-secondary);
   position: relative;
   overflow: hidden;
   box-sizing: border-box;
@@ -263,7 +263,7 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   height: 3px;
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   transform: scaleX(0);
   transition: transform 0.3s ease;
 }
@@ -273,19 +273,19 @@ onUnmounted(() => {
 }
 
 .server-card:hover {
-  box-shadow: 0 6px 16px rgba(39, 174, 96, 0.15);
-  border-color: rgba(39, 174, 96, 0.3);
+  box-shadow: 0 6px 16px var(--accent-light);
+  border-color: var(--accent-color);
 }
 
 .server-card h3 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.3rem;
   margin: 0 0 1rem 0;
 }
 
 .server-card p {
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 0.95rem;
   margin: 0.5rem 0;
   display: flex;
@@ -311,12 +311,12 @@ onUnmounted(() => {
 }
 
 .modal {
-  background: #ffffff;
+  background: var(--bg-primary);
   padding: 2rem;
   border-radius: 12px;
   width: 450px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
-  border: 1px solid #e9ecef;
+  box-shadow: 0 20px 60px var(--shadow-color);
+  border: 1px solid var(--border-color);
   box-sizing: border-box;
   max-width: calc(100vw - 2rem);
   max-height: calc(100vh - 2rem);
@@ -326,7 +326,7 @@ onUnmounted(() => {
 }
 
 .modal h3 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.5rem;
   margin: 0 0 2rem 0;
@@ -343,7 +343,7 @@ onUnmounted(() => {
 .form-group label {
   display: block;
   margin-bottom: 0.8rem;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 0.95rem;
 }
@@ -351,20 +351,21 @@ onUnmounted(() => {
 .form-group input {
   width: 100%;
   padding: 1rem;
-  border: 2px solid #e9ecef;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.3s ease;
-  background: #ffffff;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   box-sizing: border-box;
   min-width: 0;
 }
 
 .form-group input:focus {
   outline: none;
-  border-color: #27ae60;
-  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
-  background: #ffffff;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-light);
+  background: var(--bg-secondary);
 }
 
 .modal-buttons {
@@ -377,9 +378,9 @@ onUnmounted(() => {
 }
 
 .cancel-btn {
-  background: #bdc3c7;
-  color: #2c3e50;
-  border: none;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 0.8rem 1.5rem;
   cursor: pointer;
@@ -390,12 +391,12 @@ onUnmounted(() => {
 }
 
 .cancel-btn:hover {
-  background: #95a5a6;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--border-color);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .confirm-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   color: white;
   border: none;
   border-radius: 8px;
@@ -403,13 +404,13 @@ onUnmounted(() => {
   cursor: pointer;
   font-weight: 600;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 2px 8px var(--accent-light);
   box-sizing: border-box;
   white-space: nowrap;
 }
 
 .confirm-btn:hover {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 /* 响应式设计 */
@@ -466,10 +467,10 @@ onUnmounted(() => {
 /* 右键菜单样式 */
 .context-menu {
   position: fixed;
-  background: #ffffff;
-  border: 1px solid #e9ecef;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 8px 24px var(--shadow-color);
   z-index: 1001;
   min-width: 140px;
   overflow: hidden;
@@ -480,13 +481,13 @@ onUnmounted(() => {
   padding: 0.8rem 1.2rem;
   cursor: pointer;
   transition: all 0.2s ease;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 500;
   box-sizing: border-box;
 }
 
 .context-menu .menu-item:hover {
-  background: linear-gradient(135deg, rgba(39, 174, 96, 0.1) 0%, rgba(46, 204, 113, 0.1) 100%);
-  color: #27ae60;
+  background: var(--accent-light);
+  color: var(--accent-color);
 }
 </style>

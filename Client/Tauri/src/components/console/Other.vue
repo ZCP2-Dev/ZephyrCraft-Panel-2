@@ -68,12 +68,12 @@ function setWeather() {
 
 <style scoped>
 .other-container {
-  background: #ffffff;
+  /* background: var(--bg-primary); */
   padding: 1.5rem;
 }
 
 .other-container h2 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 2rem;
   margin: 0 0 1.5rem 0;
@@ -81,7 +81,7 @@ function setWeather() {
 }
 
 .other-container h3 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.4rem;
   margin: 0 0 1.2rem 0;
@@ -91,11 +91,11 @@ function setWeather() {
 }
 
 .system-info {
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 2rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .info-grid {
@@ -105,10 +105,10 @@ function setWeather() {
 }
 
 .info-item {
-  background: #ffffff;
+  background: var(--bg-primary);
   padding: 1rem 1.2rem;
   border-radius: 6px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   gap: 0.8rem;
@@ -118,7 +118,7 @@ function setWeather() {
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -134,21 +134,21 @@ function setWeather() {
 
 .info-label {
   font-size: 0.9rem;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-weight: 500;
 }
 
 .info-value {
   font-size: 1.1rem;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .quick-actions {
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 1.5rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .action-grid {
@@ -158,7 +158,7 @@ function setWeather() {
 }
 
 .action-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -170,7 +170,7 @@ function setWeather() {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 2px 8px var(--accent-light);
   position: relative;
   overflow: hidden;
 }
@@ -191,39 +191,40 @@ function setWeather() {
 }
 
 .action-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .action-btn:disabled {
-  background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .save-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  background: var(--accent-gradient);
+  box-shadow: 0 2px 8px var(--accent-light);
 }
 
 .save-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .clear-btn {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  background: var(--error-color);
+  box-shadow: 0 2px 8px var(--error-color);
 }
 
 .clear-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  box-shadow: 0 4px 12px var(--error-color);
 }
 
 .weather-btn {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  background: var(--info-color);
+  box-shadow: 0 2px 8px var(--info-color);
 }
 
 .weather-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+  box-shadow: 0 4px 12px var(--info-color);
 }
 </style>

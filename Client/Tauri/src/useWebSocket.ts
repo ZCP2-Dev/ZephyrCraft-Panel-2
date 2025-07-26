@@ -179,13 +179,22 @@ export function useWebSocket(options: UseWebSocketOptions) {
     console.log('Current connection status:', connectionStatus.value); // 调试日志
     
     if (ws.value && connectionStatus.value === 'connected') {
-      const msg = {
-        command: data.command || '',
-        content: data.content || '',
-        output: data.output || '',
-        error: data.error || '',
-        status: data.status || ''
-      };
+      const msg: any = {};
+      
+      // 只有当字段有值时才添加到消息中
+      if (data.command) msg.command = data.command;
+      if (data.content) msg.content = data.content;
+      if (data.output) msg.output = data.output;
+      if (data.error) msg.error = data.error;
+      if (data.status) msg.status = data.status;
+      if (data.filePath) msg.filePath = data.filePath;
+      if (data.fileContent) msg.fileContent = data.fileContent;
+      if (data.oldPath) msg.oldPath = data.oldPath;
+      if (data.newPath) msg.newPath = data.newPath;
+      if (data.fileList && data.fileList.length > 0) msg.fileList = data.fileList;
+      if (data.filesToZip && data.filesToZip.length > 0) msg.filesToZip = data.filesToZip;
+      if (data.zipFileName) msg.zipFileName = data.zipFileName;
+      
       console.log('Sending message:', msg); // 调试日志
       ws.value.send(JSON.stringify(msg));
     } else {

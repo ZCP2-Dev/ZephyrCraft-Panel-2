@@ -4,7 +4,7 @@
     
     <!-- 假数据警告 -->
     <div v-if="showFakeDataWarning" class="fake-data-warning">
-      <div class="warning-icon">⚠️</div>
+      <!-- <div class="warning-icon">⚠️</div> -->
       <div class="warning-text">
         <strong>数据更新中</strong><br>
         正在更新数据，请稍后...
@@ -44,13 +44,6 @@
         </div>
       </div>
       <div class="info-card">
-        <div class="card-title">服务器TPS</div>
-        <div class="card-value">
-          <div v-if="isLoading" class="loading-spinner"></div>
-          <span v-else>{{ serverInfo.tps.toFixed(1) }}</span>
-        </div>
-      </div>
-      <div class="info-card">
         <div class="card-title">系统运行时间</div>
         <div class="card-value">
           <div v-if="isLoading" class="loading-spinner"></div>
@@ -68,6 +61,7 @@
     <div class="overview-section">
       <h3>服务器状态</h3>
       <p>版本：{{ serverInfo.version }}</p>
+      <p>加载器版本：{{ serverInfo.loaderVersion }}</p>
       <p>启动时间：{{ serverInfo.startTime || '----' }}</p>
       <p>服务器地址：{{ server?.wsUrl || 'ws://127.0.0.1:19132' }}</p>
     </div>
@@ -155,10 +149,10 @@ const lastValidSystemInfo = ref({
 // 服务器信息状态
 const serverInfo = ref({
   version: '未知',
+  loaderVersion: '未知',
   startTime: '',
   playerCount: 0,
   maxPlayers: 20,
-  tps: 20.0,
   uptime: 0
 });
 
@@ -190,29 +184,9 @@ function formatUptime(uptime: number): string {
   return `${days}天${hours}小时`;
 }
 
-// 判断是否为假数据
-function isFakeData(data: any): boolean {
-  // 检查内存数据是否为假数据（1000MB = 1GB，明显不是真实系统）
-  if (data.memoryTotal === 1000 || data.memoryTotal === 1024) {
-    return true;
-  }
-  
-  // 检查磁盘数据是否为假数据（1000MB = 1GB，明显不是真实系统）
-  if (data.diskTotal === 1000 || data.diskTotal === 1024) {
-    return true;
-  }
-  
-  // 检查其他明显不合理的值
-  if (data.memoryTotal < 2000 || data.diskTotal < 10000) { // 小于2GB内存或10GB磁盘
-    return true;
-  }
-  
-  return false;
-}
-
 // 验证并更新系统信息
 function validateAndUpdateSystemInfo(newData: any) {
-  if (isFakeData(newData)) {
+  if (false) {
     console.log('Overview: Detected fake data, using last valid data:', newData);
     // 使用上次的真实数据
     systemInfo.value = { ...lastValidSystemInfo.value };
@@ -333,17 +307,17 @@ onMounted(() => {
   startRefresh();
   
   // 测试消息总线是否工作（仅在开发环境）
-  if (import.meta.env.DEV) {
-    setTimeout(() => {
-      console.log('Overview: Testing message bus');
-      if (window && (window as any).__SYSTEM_BUS__) {
-        (window as any).__SYSTEM_BUS__.emit('system-message', {
-          systemInfo: { cpuUsage: 50, memoryUsage: 60, memoryTotal: 1000, memoryUsed: 600, diskUsage: 70, diskTotal: 1000, diskUsed: 700, uptime: 3600 },
-          serverInfo: { version: '测试版本', startTime: '2024-01-01', playerCount: 5, maxPlayers: 20, tps: 18.5, uptime: 1800 }
-        });
-      }
-    }, 2000);
-  }
+  // if (import.meta.env.DEV) {
+  //   setTimeout(() => {
+  //     console.log('Overview: Testing message bus');
+  //     if (window && (window as any).__SYSTEM_BUS__) {
+  //       (window as any).__SYSTEM_BUS__.emit('system-message', {
+  //         systemInfo: { cpuUsage: 50, memoryUsage: 60, memoryTotal: 1000, memoryUsed: 600, diskUsage: 70, diskTotal: 1000, diskUsed: 700, uptime: 3600 },
+  //         serverInfo: { version: '测试版本', startTime: '2024-01-01', playerCount: 5, maxPlayers: 20, tps: 18.5, uptime: 1800 }
+  //       });
+  //     }
+  //   }, 2000);
+  // }
 });
 
 // 组件卸载时清理监听器
@@ -399,12 +373,12 @@ watch(isConnected, (connected) => {
 
 <style scoped>
 .overview-container {
-  background: #ffffff;
+  /* background: var(--bg-primary); */
   padding: 1.5rem;
 }
 
 .overview-container h2 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 2rem;
   margin: 0 0 1.5rem 0;
@@ -419,18 +393,18 @@ watch(isConnected, (connected) => {
 }
 
 .info-card {
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 1.2rem 1.5rem;
   min-width: 160px;
   text-align: center;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
   flex: 1;
   min-width: 200px;
 }
 
 .card-title {
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 1rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
@@ -439,19 +413,19 @@ watch(isConnected, (connected) => {
 .card-value {
   font-size: 1.6rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .overview-section {
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .overview-section h3 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.4rem;
   margin: 0 0 1.2rem 0;
@@ -461,13 +435,13 @@ watch(isConnected, (connected) => {
 }
 
 .overview-section p {
-  color: #34495e;
+  color: var(--text-primary);
   font-size: 1rem;
   margin: 0.8rem 0;
   padding: 0.7rem 0.8rem;
-  background: #ffffff;
+  background: var(--bg-primary);
   border-radius: 6px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -482,12 +456,12 @@ watch(isConnected, (connected) => {
 }
 
 .status-running {
-  color: #27ae60;
+  color: var(--success-color);
   font-weight: 600;
 }
 
 .status-stopped {
-  color: #e74c3c;
+  color: var(--error-color);
   font-weight: 600;
 }
 
@@ -506,20 +480,20 @@ watch(isConnected, (connected) => {
 .progress-label {
   min-width: 100px;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .progress-bar {
   flex: 1;
   height: 8px;
-  background: #e9ecef;
+  background: var(--border-light);
   border-radius: 4px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
-  background: linear-gradient(90deg, #27ae60, #2ecc71);
+  background: var(--accent-gradient);
   transition: width 0.3s ease;
 }
 
@@ -527,15 +501,15 @@ watch(isConnected, (connected) => {
   min-width: 60px;
   text-align: right;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 /* 加载动画 */
 .loading-spinner {
   width: 16px;
   height: 16px;
-  border: 2px solid #e9ecef;
-  border-top: 2px solid #27ae60;
+  border: 2px solid var(--border-color);
+  border-top: 2px solid var(--accent-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
   margin: 0 auto;
@@ -543,7 +517,7 @@ watch(isConnected, (connected) => {
 
 .progress-loading {
   height: 100%;
-  background: linear-gradient(90deg, #e9ecef 25%, #f8f9fa 50%, #e9ecef 75%);
+  background: linear-gradient(90deg, var(--border-color) 25%, var(--bg-secondary) 50%, var(--border-color) 75%);
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
   border-radius: 4px;
@@ -561,8 +535,8 @@ watch(isConnected, (connected) => {
 
 /* 假数据警告样式 */
 .fake-data-warning {
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
+  background: var(--bg-warning);
+  border: 1px solid var(--warning-color);
   border-radius: 8px;
   padding: 1rem;
   margin-bottom: 1.5rem;
@@ -578,7 +552,7 @@ watch(isConnected, (connected) => {
 }
 
 .warning-text {
-  color: #856404;
+  color: var(--warning-color);
   font-size: 0.9rem;
   line-height: 1.4;
 }

@@ -1,5 +1,5 @@
 <template>
-  <div class="players-container">
+  <div class="players-container" :key="refreshKey">
     <h2>玩家管理</h2>
     
     <div class="players-stats">
@@ -51,19 +51,15 @@
     <div class="players-section">
       <h3>玩家操作</h3>
       <div class="action-buttons">
-        <button @click="requestPlayers()" class="action-btn" :disabled="!globalIsRunning">
+        <button @click="forceReload" class="action-btn" :disabled="!globalIsRunning">
           <IconMdiRefresh style="margin-right: 5px;" />刷新玩家列表
         </button>
-
-        <button @click="sendCommand('save')" class="action-btn" :disabled="!globalIsRunning">
-          <IconMdiContentSave style="margin-right: 5px;" />保存世界
-        </button>
-        <button @click="sendCommand('whitelist list')" class="action-btn" :disabled="!globalIsRunning">
+        <!-- <button @click="sendCommand('whitelist list')" class="action-btn" :disabled="!globalIsRunning">
           <IconMdiAccountGroup style="margin-right: 5px;" />查看白名单
         </button>
         <button @click="sendCommand('list')" class="action-btn" :disabled="!globalIsRunning">
           <IconMdiAccountGroup style="margin-right: 5px;" />查看在线玩家
-        </button>
+        </button> -->
       </div>
     </div>
   </div>
@@ -80,10 +76,12 @@ const isInConsole = inject('isInConsole') as any;
 // 玩家列表
 const players = ref<Array<{ name: string; xuid?: string }>>([]);
 const maxPlayers = ref(20);
-const isRunning = ref(false);
 
 // 从全局状态获取服务器运行状态
 const globalIsRunning = inject('isRunning') as any;
+
+// 新增：用于强制刷新组件的key
+const refreshKey = ref(0);
 
 let refreshTimer: number | null = null;
 
@@ -110,17 +108,10 @@ function sendMessage(playerName: string) {
   }
 }
 
-// 发送命令
-function sendCommand(command: string) {
-  if (wsApi && isConnected.value && globalIsRunning) {
-    wsApi.send({ command: 'input', content: command });
-  }
-}
-
-
 
 // 请求玩家列表
 function requestPlayers() {
+  requestServerInfo();
   console.log('Players: Requesting players list, wsApi:', !!wsApi, 'isConnected:', isConnected.value, 'isRunning:', globalIsRunning);
   if (wsApi && isConnected.value && globalIsRunning) {
     console.log('Players: Sending getPlayers command');
@@ -132,6 +123,19 @@ function requestPlayers() {
   }
 }
 
+function requestServerInfo() {
+  if (wsApi && isConnected.value) {
+    console.log('Players: Sending getServerInfo command');
+    wsApi.send({ command: 'getServerInfo' });
+  } else {
+    console.log('Players: Cannot send getServerInfo - wsApi:', !!wsApi, 'isConnected:', isConnected.value);
+  }
+}
+
+// 修改刷新按钮逻辑
+function forceReload() {
+  refreshKey.value++;
+}
 
 
 // 组件激活时刷新
@@ -342,12 +346,12 @@ watch(() => isInConsole, (inConsole) => {
 
 <style scoped>
 .players-container {
-  background: #ffffff;
+  /* background: var(--bg-primary); */
   padding: 1.5rem;
 }
 
 .players-container h2 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 2rem;
   margin: 0 0 1.5rem 0;
@@ -362,17 +366,17 @@ watch(() => isInConsole, (inConsole) => {
 }
 
 .stat-card {
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 1.2rem 1.5rem;
   text-align: center;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
   flex: 1;
   min-width: 150px;
 }
 
 .stat-title {
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
@@ -381,19 +385,19 @@ watch(() => isInConsole, (inConsole) => {
 .stat-value {
   font-size: 1.8rem;
   font-weight: 700;
-  color: #2c3e50;
+  color: var(--text-primary);
 }
 
 .players-section {
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 1.5rem;
   margin-bottom: 1.5rem;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .players-section h3 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.4rem;
   margin: 0 0 1.2rem 0;
@@ -413,15 +417,15 @@ watch(() => isInConsole, (inConsole) => {
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.2rem;
-  background: #ffffff;
+  background: var(--bg-primary);
   border-radius: 8px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .player-item:hover {
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.1);
-  border-color: rgba(39, 174, 96, 0.2);
+  box-shadow: 0 2px 8px var(--accent-light);
+  border-color: var(--accent-color);
 }
 
 .player-info {
@@ -434,7 +438,7 @@ watch(() => isInConsole, (inConsole) => {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -450,18 +454,18 @@ watch(() => isInConsole, (inConsole) => {
 
 .player-name {
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-size: 1.1rem;
 }
 
 .player-status {
   font-size: 0.9rem;
-  color: #7f8c8d;
+  color: var(--text-secondary);
 }
 
 .player-xuid {
   font-size: 0.75rem;
-  color: #95a5a6;
+  color: var(--text-muted);
   margin-top: 0.2rem;
 }
 
@@ -471,7 +475,7 @@ watch(() => isInConsole, (inConsole) => {
 }
 
 .message-btn {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  background: var(--info-color);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -482,21 +486,22 @@ watch(() => isInConsole, (inConsole) => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 2px 8px var(--info-color);
 }
 
 .message-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+  box-shadow: 0 4px 12px var(--info-color);
 }
 
 .message-btn:disabled {
-  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .kick-btn {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: var(--error-color);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -507,17 +512,18 @@ watch(() => isInConsole, (inConsole) => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  box-shadow: 0 2px 8px var(--error-color);
 }
 
 .kick-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  box-shadow: 0 4px 12px var(--error-color);
 }
 
 .kick-btn:disabled {
-  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .action-buttons {
@@ -527,7 +533,7 @@ watch(() => isInConsole, (inConsole) => {
 }
 
 .action-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -538,36 +544,37 @@ watch(() => isInConsole, (inConsole) => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 2px 8px var(--accent-light);
 }
 
 .action-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .action-btn:disabled {
-  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .no-players {
   text-align: center;
   padding: 3rem 2rem;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 1.1rem;
-  background: #ffffff;
+  background: var(--bg-primary);
   border-radius: 8px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .status-running {
-  color: #27ae60;
+  color: var(--success-color);
   font-weight: 600;
 }
 
 .status-stopped {
-  color: #e74c3c;
+  color: var(--error-color);
   font-weight: 600;
 }
 </style>

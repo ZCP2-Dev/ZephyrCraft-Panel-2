@@ -1,7 +1,10 @@
 package main
 
 import (
+	"encoding/json"
+	"os"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"time"
@@ -17,6 +20,7 @@ type SystemMonitor struct {
 	lastCPUUsage float64
 	lastCPUTime  time.Time
 	outputBuffer []string
+	startTime    string
 }
 
 // NewSystemMonitor 创建新的系统监控器
@@ -69,27 +73,65 @@ func (sm *SystemMonitor) AddOutputLine(line string) {
 	}
 }
 
+// SetStartTimeNow 设置启动时间为当前时间
+func (sm *SystemMonitor) SetStartTimeNow() {
+	sm.startTime = time.Now().Format("2006-01-02 15:04:05")
+}
+
 // GetServerInfo 从进程输出中解析服务器信息
 func (sm *SystemMonitor) GetServerInfo() *ServerInfo {
 	info := &ServerInfo{
-		Version:     "未知",
-		StartTime:   "",
-		PlayerCount: 0,
-		MaxPlayers:  20, // 默认值
-		TPS:         20.0,
-		Uptime:      0,
+		Version:       "未知",
+		LoaderVersion: "",
+		StartTime:     sm.startTime,
+		PlayerCount:   GetPlayerManager().GetPlayerCount(),
+		MaxPlayers:    20, // 默认值
+		Uptime:        0,
 	}
 
-	// 从最近的输出中解析信息
+	// 读取max-players
+	fileManager := GetFileManager()
+	if maxPlayers, err := fileManager.GetMaxPlayers(); err == nil && maxPlayers > 0 {
+		info.MaxPlayers = maxPlayers
+	}
+
+	// 优先从配置文件读取版本
+	if config.Version != "" && config.Version != "未知" {
+		info.Version = config.Version
+		info.LoaderVersion = config.LoaderVersion
+	}
+
 	for i := len(sm.outputBuffer) - 1; i >= 0 && i >= len(sm.outputBuffer)-100; i-- {
 		line := sm.outputBuffer[i]
-
 		// 解析版本信息
-		if strings.Contains(line, "Version") && strings.Contains(line, "Bedrock") {
-			if versionIndex := strings.Index(line, "Version"); versionIndex != -1 {
-				parts := strings.Fields(line[versionIndex:])
-				if len(parts) >= 2 {
-					info.Version = parts[1]
+		if strings.Contains(line, "Version:") {
+			ver := ""
+			loader := ""
+			if idx := strings.Index(line, "Version:"); idx != -1 {
+				verStr := line[idx+8:]
+				verStr = strings.TrimSpace(verStr)
+				// 删除ANSI转义序列等多余文本
+				verStr = removeANSI(verStr)
+				// 解析Loader版本
+				if strings.Contains(verStr, "with ") {
+					parts := strings.SplitN(verStr, "with ", 2)
+					ver = strings.TrimSpace(parts[0])
+					loader = strings.TrimSpace(parts[1])
+				} else {
+					// 只取第一个空格前内容或括号前内容
+					if sp := strings.IndexAny(verStr, " (【"); sp != -1 {
+						ver = verStr[:sp]
+					} else {
+						ver = verStr
+					}
+				}
+				if ver != "" {
+					info.Version = ver
+					updateConfigVersion(ver)
+				}
+				if loader != "" {
+					info.LoaderVersion = loader
+					updateConfigLoaderVersion(loader)
 				}
 			}
 		}
@@ -106,30 +148,6 @@ func (sm *SystemMonitor) GetServerInfo() *ServerInfo {
 			}
 		}
 
-		// 解析最大玩家数
-		if strings.Contains(line, "max") && strings.Contains(line, "players") {
-			parts := strings.Fields(line)
-			for j, part := range parts {
-				if part == "max" && j+1 < len(parts) {
-					if max, err := strconv.Atoi(parts[j+1]); err == nil {
-						info.MaxPlayers = max
-					}
-				}
-			}
-		}
-
-		// 解析TPS
-		if strings.Contains(line, "TPS") {
-			parts := strings.Fields(line)
-			for j, part := range parts {
-				if part == "TPS" && j+1 < len(parts) {
-					if tps, err := strconv.ParseFloat(parts[j+1], 64); err == nil {
-						info.TPS = tps
-					}
-				}
-			}
-		}
-
 		// 解析启动时间
 		if strings.Contains(line, "Started") && strings.Contains(line, "server") {
 			// 尝试从输出中提取启动时间
@@ -138,6 +156,66 @@ func (sm *SystemMonitor) GetServerInfo() *ServerInfo {
 	}
 
 	return info
+}
+
+// 更新config.json中的Version字段
+func updateConfigVersion(version string) {
+	configPath := ".\\Panel_Setting\\config.json"
+	file, err := os.OpenFile(configPath, os.O_RDWR, 0644)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	var cfg map[string]interface{}
+	if err := json.NewDecoder(file).Decode(&cfg); err != nil {
+		return
+	}
+	cfg["Version"] = version
+	file.Seek(0, 0)
+	file.Truncate(0)
+	json.NewEncoder(file).Encode(cfg)
+}
+
+// 更新config.json中的LoaderVersion字段
+func updateConfigLoaderVersion(loader string) {
+	configPath := ".\\Panel_Setting\\config.json"
+	file, err := os.OpenFile(configPath, os.O_RDWR, 0644)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+	var cfg map[string]interface{}
+	if err := json.NewDecoder(file).Decode(&cfg); err != nil {
+		return
+	}
+	cfg["LoaderVersion"] = loader
+	file.Seek(0, 0)
+	file.Truncate(0)
+	json.NewEncoder(file).Encode(cfg)
+}
+
+// 删除ANSI转义序列等多余文本
+func removeANSI(text string) string {
+	// 删除ANSI转义序列
+	ansiRegex := regexp.MustCompile(`\x1b\[[0-9;]*[a-zA-Z]`)
+	text = ansiRegex.ReplaceAllString(text, "")
+	// 删除其他控制字符
+	controlRegex := regexp.MustCompile(`[\x00-\x1f\x7f]`)
+	text = controlRegex.ReplaceAllString(text, "")
+	return strings.TrimSpace(text)
+}
+
+// GetConsoleHistory 获取终端输出历史（最后100行，顺序为最早到最新）
+func (sm *SystemMonitor) GetConsoleHistory() []string {
+	history := []string{}
+	start := 0
+	if len(sm.outputBuffer) > 100 {
+		start = len(sm.outputBuffer) - 100
+	}
+	for i := start; i < len(sm.outputBuffer); i++ {
+		history = append(history, sm.outputBuffer[i])
+	}
+	return history
 }
 
 // 全局系统监控器实例

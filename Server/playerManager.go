@@ -1,10 +1,13 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
+	"net/http"
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 // Player 玩家信息结构
@@ -83,6 +86,7 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 	// 玩家连接事件的正则表达式
 	// 匹配格式: "12:19:34.368 INFO [Server] Player connected: win81pro, xuid: 2535421504983964"
 	connectedRegex := regexp.MustCompile(`Player connected:\s*([^,]+)(?:,\s*xuid:\s*([^\s]+))?`)
+	connectedRegex4 := regexp.MustCompile(`Player Spawned:\s*([^,]+)(?:,\s*xuid:\s*([^\s]+))?`)
 
 	// 玩家断开事件的正则表达式
 	// 匹配格式: "12:20:27.624 INFO [Server] Player disconnected: win81pro, xuid: 2535421504983964, pfid: c1e893d6b8ec3e71"
@@ -112,7 +116,55 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 			xuid = matches[2]
 		}
 		log.Printf("[PlayerManager][DEBUG]检测到玩家连接事件: %s (XUID: %s)", playerName, xuid)
-		pm.AddPlayer(playerName, xuid)
+
+		return true
+	}
+
+	// 检查是否为玩家生成事件
+	if matches := connectedRegex4.FindStringSubmatch(line); matches != nil {
+		playerName := matches[1]
+		xuid := ""
+		if len(matches) > 2 {
+			xuid = matches[2]
+		}
+
+		if xuid != "" {
+			go func(name, xuid string) {
+				client := &http.Client{Timeout: 5 * time.Second}
+				url := "http://uniteban.xyz:19132/api.php?xuid=" + xuid
+				resp, err := client.Get(url)
+				if err != nil {
+					log.Printf("[Uniteban] 请求失败: %v", err)
+					pm.AddPlayer(name, xuid) // API失败，正常添加
+					return
+				}
+				defer resp.Body.Close()
+				var result struct {
+					Exists bool   `json:"exists"`
+					Reason string `json:"reason"`
+				}
+				if err := json.NewDecoder(resp.Body).Decode(&result); err != nil {
+					log.Printf("[Uniteban] 解析响应失败: %v", err)
+					pm.AddPlayer(name, xuid) // 解析失败，正常添加
+					return
+				}
+				if result.Exists {
+					reason := result.Reason
+					if reason == "" {
+						reason = "云黑封禁"
+					}
+					if config.Uniteban {
+						log.Printf("[Uniteban] 玩家 %s (XUID: %s) 命中云黑，踢出，理由: %s", name, xuid, reason)
+						pm.kickPlayer(name, reason)
+					} else {
+						log.Printf("[Uniteban][警告] 玩家 %s (XUID: %s) 命中云黑，但未自动踢出！", name, xuid)
+						pm.AddPlayer(name, xuid+"_危险玩家(云黑)")
+					}
+				} else {
+					pm.AddPlayer(name, xuid)
+				}
+			}(playerName, xuid)
+		}
 		return true
 	}
 
@@ -191,6 +243,18 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 	}
 
 	return false
+}
+
+// 新增kickPlayer方法
+func (pm *PlayerManager) kickPlayer(name, reason string) {
+	// 通过ProcessManager发送kick命令
+	pm.mu.RLock()
+	defer pm.mu.RUnlock()
+	proc := getProcessManager()
+	if proc != nil {
+		cmd := "kick " + name + " " + reason
+		_ = proc.SendCommand(cmd)
+	}
 }
 
 // 全局玩家管理器实例

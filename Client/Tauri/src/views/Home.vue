@@ -4,6 +4,9 @@
       <div class="sidebar-header">
         <img src="../assets/logo.png" alt="logo" style="width: 60px; height: 60px;" />
         <h2 style="margin-top: 5px;">ZephyrCraft Panel</h2>
+        <div class="header-actions">
+          <!-- <ThemeToggle /> 颜色模式 -->
+        </div>
       </div>
       <div class="sidebar-menu">
   <template v-if="!isInConsole">
@@ -148,8 +151,6 @@ provide('isInConsole', isInConsole);
 const connectionStatus = computed(() => wsApi.connectionStatus.value);
 const isConnecting = computed(() => wsApi.isConnecting.value);
 const lastError = computed(() => wsApi.lastError.value);
-
-const isConnected = computed(() => wsApi?.isConnected && typeof wsApi.isConnected === 'object' ? wsApi.isConnected.value : wsApi.isConnected);
 
 function getStatusText() {
   switch (connectionStatus.value) {
@@ -377,7 +378,9 @@ wsApi.onMessage = (data: any) => {
   if (window && (window as any).__TERMINAL_BUS__) {
     // 过滤掉系统监控、服务器信息、玩家列表和文件管理消息，这些不应该在终端中显示
     if (data && typeof data === 'object' && (data.systemInfo || data.serverInfo || data.players || 
-        data.fileList || data.fileContent !== undefined || data.filePath || data.oldPath || data.newPath)) {
+        data.fileList || data.fileContent !== undefined || data.filePath || data.oldPath || data.newPath ||
+        // 新增：文件操作成功响应也应该发送到file-message
+        (data.status === 'success' && (data.command === 'renameFile' || data.command === 'deleteFile' || data.command === 'createDirectory' || data.command === 'uploadFile' || data.command === 'writeFile' || data.command === 'createZip')))) {
       // 这些是系统监控、玩家管理和文件管理消息，只发送给相应的组件，不发送到终端
       console.log('System/Player/File monitoring message, not sending to terminal:', data);
       // 发送到专门的消息总线，而不是终端总线
@@ -385,7 +388,9 @@ wsApi.onMessage = (data: any) => {
         console.log('Home: Emitting to system bus:', data);
         (window as any).__SYSTEM_BUS__.emit('system-message', data);
         // 同时发送文件相关消息到专门的文件消息总线
-        if (data.fileList || data.fileContent !== undefined || data.filePath || data.oldPath || data.newPath) {
+        if (data.fileList || data.fileContent !== undefined || data.filePath || data.oldPath || data.newPath ||
+            // 新增：文件操作成功响应也应该发送到file-message
+            (data.status === 'success' && (data.command === 'renameFile' || data.command === 'deleteFile' || data.command === 'createDirectory' || data.command === 'uploadFile' || data.command === 'writeFile' || data.command === 'createZip'))) {
           (window as any).__SYSTEM_BUS__.emit('file-message', data);
         }
       } else {
@@ -503,17 +508,17 @@ const consoleProps = computed(() => {
 .layout-root {
   display: flex;
   height: 100vh;
-  background: #ffffff;
+  background: var(--bg-primary);
 }
 
 .sidebar {
   width: 280px;
-  background: #ffffff;
-  color: #2c3e50;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   display: flex;
   flex-direction: column;
   align-items: stretch;
-  border-right: 1px solid #e9ecef;
+  border-right: 1px solid var(--border-color);
   margin: 0;
   min-height: 0;
   padding: 20px;
@@ -527,16 +532,22 @@ const consoleProps = computed(() => {
 .sidebar-header {
   padding: 2rem 1rem 1.5rem 1rem;
   text-align: center;
-  border-bottom: 1px solid #e9ecef;
+  border-bottom: 1px solid var(--border-color);
   margin-bottom: 1rem;
   flex-shrink: 0;
 }
 
 .sidebar-header h2 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.4rem;
   margin: 0;
+}
+
+.header-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
 }
 
 .sidebar-menu {
@@ -569,7 +580,7 @@ const consoleProps = computed(() => {
 .menu-item {
   background: none;
   border: none;
-  color: #34495e;
+  color: var(--text-secondary);
   text-align: left;
   padding: 0.8rem 1.2rem;
   font-size: 1rem;
@@ -595,7 +606,7 @@ const consoleProps = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   opacity: 0;
   transition: opacity 0.3s ease;
   z-index: -1;
@@ -606,25 +617,25 @@ const consoleProps = computed(() => {
 }
 
 .menu-item.active, .menu-item:hover {
-  background: linear-gradient(135deg, rgba(39, 174, 96, 0.1) 0%, rgba(46, 204, 113, 0.1) 100%);
-  color: #27ae60;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.2);
+  background: var(--accent-light);
+  color: var(--accent-color);
+  box-shadow: 0 2px 8px var(--accent-light);
 }
 
 .return-btn {
-  color: #27ae60;
+  color: var(--accent-color);
   font-weight: 600;
-  background: linear-gradient(135deg, rgba(39, 174, 96, 0.1) 0%, rgba(46, 204, 113, 0.1) 100%);
+  background: var(--accent-light);
   border-radius: 8px;
   margin-bottom: 1.2rem;
-  border: 1px solid rgba(39, 174, 96, 0.2);
+  border: 1px solid var(--accent-color);
   flex-shrink: 0;
 }
 
 .console-menu-header {
   margin: 1.2rem 0 0.8rem 1.5rem;
   font-size: 1.1rem;
-  color: #27ae60;
+  color: var(--accent-color);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -666,9 +677,9 @@ const consoleProps = computed(() => {
 .connection-status {
   margin-top: auto;
   padding: 1.2rem;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 12px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
   flex-shrink: 0;
   margin-bottom: 1rem;
   position: sticky;
@@ -685,31 +696,31 @@ const consoleProps = computed(() => {
 }
 
 .status-indicator.connected {
-  color: #27ae60;
+  color: var(--success-color);
 }
 
 .status-indicator.connecting {
-  color: #f39c12;
+  color: var(--warning-color);
 }
 
 .status-indicator.failed {
-  color: #e74c3c;
+  color: var(--error-color);
 }
 
 .status-indicator.disconnected {
-  color: #95a5a6;
+  color: var(--text-muted);
 }
 
 .reconnect-controls {
   margin-bottom: 1rem;
   padding: 0.8rem;
-  background: #fff3cd;
-  border: 1px solid #ffeaa7;
+  background: var(--bg-warning);
+  border: 1px solid var(--warning-color);
   border-radius: 8px;
 }
 
 .error-message {
-  color: #856404;
+  color: var(--warning-color);
   font-size: 0.85rem;
   margin-bottom: 0.8rem;
   font-weight: 500;
@@ -721,7 +732,7 @@ const consoleProps = computed(() => {
 }
 
 .reconnect-btn {
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  background: var(--warning-color);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -732,22 +743,23 @@ const consoleProps = computed(() => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+  box-shadow: 0 2px 8px var(--warning-color);
   flex: 1;
 }
 
 .reconnect-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+  box-shadow: 0 4px 12px var(--warning-color);
 }
 
 .reconnect-btn:disabled {
-  background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .connect-btn {
-  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  background: var(--info-color);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -758,22 +770,23 @@ const consoleProps = computed(() => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  box-shadow: 0 2px 8px var(--info-color);
   flex: 1;
 }
 
 .connect-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+  box-shadow: 0 4px 12px var(--info-color);
 }
 
 .connect-btn:disabled {
-  background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .reset-btn {
-  background: linear-gradient(135deg, #95a5a6 0%, #7f8c8d 100%);
+  background: var(--text-muted);
   color: #fff;
   border: none;
   border-radius: 6px;
@@ -784,11 +797,11 @@ const consoleProps = computed(() => {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(149, 165, 166, 0.3);
+  box-shadow: 0 2px 8px var(--text-muted);
 }
 
 .reset-btn:hover {
-  box-shadow: 0 4px 12px rgba(149, 165, 166, 0.4);
+  box-shadow: 0 4px 12px var(--text-muted);
 }
 
 @keyframes spin {
@@ -812,7 +825,7 @@ const consoleProps = computed(() => {
 }
 
 .control-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   color: #fff;
   border: none;
   border-radius: 8px;
@@ -824,7 +837,7 @@ const consoleProps = computed(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 2px 8px var(--accent-light);
   position: relative;
   overflow: hidden;
 }
@@ -845,63 +858,66 @@ const consoleProps = computed(() => {
 }
 
 .control-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .control-btn:disabled {
-  background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .control-btn.start {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  background: var(--accent-gradient);
+  box-shadow: 0 2px 8px var(--accent-light);
 }
 
 .control-btn.start:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .control-btn.stop {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  background: var(--error-color);
+  box-shadow: 0 2px 8px var(--error-color);
 }
 
 .control-btn.stop:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  box-shadow: 0 4px 12px var(--error-color);
 }
 
 .control-btn.stop:disabled {
-  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .control-btn.restart {
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
-  box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+  background: var(--warning-color);
+  box-shadow: 0 2px 8px var(--warning-color);
 }
 
 .control-btn.restart:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+  box-shadow: 0 4px 12px var(--warning-color);
 }
 
 .control-btn.restart:disabled {
-  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .reconnect-link {
   margin-top: 0.8rem;
   text-align: center;
   padding: 0.6rem;
-  background: rgba(39, 174, 96, 0.1);
+  background: var(--accent-light);
   border-radius: 6px;
-  border: 1px solid rgba(39, 174, 96, 0.2);
+  border: 1px solid var(--accent-color);
 }
 
 .reconnect-a {
-  color: #27ae60;
+  color: var(--accent-color);
   text-decoration: none;
   display: inline-flex;
   align-items: center;
@@ -912,13 +928,13 @@ const consoleProps = computed(() => {
 }
 
 .reconnect-a:hover {
-  color: #2ecc71;
+  color: var(--accent-hover);
   text-decoration: underline;
 }
 
 .main-content {
   flex: 1;
-  background: #ffffff;
+  background: var(--bg-primary);
   overflow: auto;
   padding: 1.5rem 2.5rem;
 }

@@ -52,6 +52,11 @@ func (pm *ProcessManager) StartProcess(serverPath string) error {
 		pm.running = false
 	}
 
+	// 记录启动时间
+	if pm.systemMonitor != nil {
+		pm.systemMonitor.SetStartTimeNow()
+	}
+
 	// 创建命令对象，指定要执行的程序（pty-proxy.exe）和参数（serverPath 即实际要启动的服务路径）
 	pm.cmd = exec.Command(".\\Panel_Setting\\pty-proxy.exe", serverPath)
 

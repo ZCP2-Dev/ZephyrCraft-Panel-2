@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"encoding/base64"
+	"strings"
 
 	"github.com/gorilla/websocket"
 )
@@ -17,8 +18,11 @@ var isDebug bool // 调试模式标记，用于控制是否输出调试信息
 var config Config // 配置结构体实例，存储从配置文件读取的内容
 
 type Config struct { // 定义配置结构，对应配置文件（如config.json）的格式
-	Port       string `json:"port"`       // WebSocket 服务监听端口
-	ServerPath string `json:"ServerPath"` // 要启动的服务程序路径
+	Port          string `json:"port"`                    // WebSocket 服务监听端口
+	ServerPath    string `json:"ServerPath"`              // 要启动的服务程序路径
+	Version       string `json:"Version,omitempty"`       // 服务器版本号
+	LoaderVersion string `json:"LoaderVersion,omitempty"` // 加载器版本号
+	Uniteban      bool   `json:"Uniteban"`                // 云黑校验开关，默认true
 }
 
 type Message struct { // 定义与前端交互的消息结构，前后端通过该结构传递命令、状态等数据
@@ -39,6 +43,10 @@ type Message struct { // 定义与前端交互的消息结构，前后端通过�
 	FileList    []FileInfo `json:"fileList,omitempty"`    // 文件列表
 	OldPath     string     `json:"oldPath,omitempty"`     // 旧路径（重命名用）
 	NewPath     string     `json:"newPath,omitempty"`     // 新路径（重命名用）
+
+	// 压缩相关字段
+	FilesToZip  []string `json:"filesToZip,omitempty"`  // 要压缩的文件列表
+	ZipFileName string   `json:"zipFileName,omitempty"` // 压缩文件名
 }
 
 // SystemInfo 系统状态信息
@@ -55,12 +63,12 @@ type SystemInfo struct {
 
 // ServerInfo 服务器信息
 type ServerInfo struct {
-	Version     string  `json:"version"`     // 服务器版本
-	StartTime   string  `json:"startTime"`   // 启动时间
-	PlayerCount int     `json:"playerCount"` // 在线玩家数
-	MaxPlayers  int     `json:"maxPlayers"`  // 最大玩家数
-	TPS         float64 `json:"tps"`         // 每秒刻数
-	Uptime      uint64  `json:"uptime"`      // 服务器运行时间(秒)
+	Version       string `json:"version"`                 // 服务器版本
+	LoaderVersion string `json:"loaderVersion,omitempty"` // 加载器版本
+	StartTime     string `json:"startTime"`               // 启动时间
+	PlayerCount   int    `json:"playerCount"`             // 在线玩家数
+	MaxPlayers    int    `json:"maxPlayers"`              // 最大玩家数
+	Uptime        uint64 `json:"uptime"`                  // 服务器运行时间(秒)
 }
 
 // WebSocket 升级配置，用于将 HTTP 连接升级为 WebSocket 连接
@@ -86,7 +94,34 @@ func readConfig() Config {
 		// 解码失败时记录致命错误并终止程序
 		log.Fatalf("[ERROR]无法解析配置文件: %v", err)
 	}
+	// 默认值处理
+	if config.Version == "" {
+		config.Version = ""
+	}
+	if config.LoaderVersion == "" {
+		config.LoaderVersion = ""
+	}
+	// Uniteban默认开启
+	// 注意：json反序列化bool为false时，只有字段缺失才会为false
+	if _, ok := getRawField(".\\Panel_Setting\\config.json", "Uniteban"); !ok {
+		config.Uniteban = true
+	}
 	return config
+}
+
+// 获取json原始字段是否存在
+func getRawField(path, key string) (interface{}, bool) {
+	file, err := os.Open(path)
+	if err != nil {
+		return nil, false
+	}
+	defer file.Close()
+	var m map[string]interface{}
+	if err := json.NewDecoder(file).Decode(&m); err != nil {
+		return nil, false
+	}
+	v, ok := m[key]
+	return v, ok
 }
 
 // 发送错误消息到前端函数，将错误信息封装成 Message 发送给前端
@@ -206,6 +241,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 		case "readFile":
 			// 读取文件内容
 			fileManager := GetFileManager()
+
 			content, err := fileManager.ReadFile(msg.FilePath)
 			if err != nil {
 				sendError(conn, "[ERROR]读取文件失败: "+err.Error())
@@ -222,7 +258,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				sendError(conn, "[ERROR]写入文件失败: "+err.Error())
 			} else {
-				if err := conn.WriteJSON(Message{Status: "success", FilePath: msg.FilePath}); err != nil {
+				if err := conn.WriteJSON(Message{Status: "success", Command: "writeFile", FilePath: msg.FilePath}); err != nil {
 					log.Printf("[ERROR]发送写入成功消息失败: %v", err)
 				}
 			}
@@ -234,7 +270,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				sendError(conn, "[ERROR]创建目录失败: "+err.Error())
 			} else {
-				if err := conn.WriteJSON(Message{Status: "success"}); err != nil {
+				if err := conn.WriteJSON(Message{Status: "success", Command: "createDirectory"}); err != nil {
 					log.Printf("[ERROR]发送创建成功消息失败: %v", err)
 				}
 			}
@@ -246,7 +282,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				sendError(conn, "[ERROR]删除文件失败: "+err.Error())
 			} else {
-				if err := conn.WriteJSON(Message{Status: "success"}); err != nil {
+				if err := conn.WriteJSON(Message{Status: "success", Command: "deleteFile"}); err != nil {
 					log.Printf("[ERROR]发送删除成功消息失败: %v", err)
 				}
 			}
@@ -258,7 +294,7 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				sendError(conn, "[ERROR]重命名文件失败: "+err.Error())
 			} else {
-				if err := conn.WriteJSON(Message{Status: "success"}); err != nil {
+				if err := conn.WriteJSON(Message{Status: "success", Command: "renameFile"}); err != nil {
 					log.Printf("[ERROR]发送重命名成功消息失败: %v", err)
 				}
 			}
@@ -294,9 +330,63 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if err != nil {
 				sendError(conn, "[ERROR]上传文件失败: "+err.Error())
 			} else {
-				if err := conn.WriteJSON(Message{Status: "success", FilePath: msg.FilePath}); err != nil {
+				if err := conn.WriteJSON(Message{Status: "success", Command: "uploadFile", FilePath: msg.FilePath}); err != nil {
 					log.Printf("[ERROR]发送上传成功消息失败: %v", err)
 				}
+			}
+
+		case "createZip":
+			// 创建zip文件
+			fileManager := GetFileManager()
+			if len(msg.FilesToZip) == 0 {
+				sendError(conn, "[ERROR]未指定要压缩的文件")
+				continue
+			}
+			if msg.ZipFileName == "" {
+				sendError(conn, "[ERROR]未指定压缩文件名")
+				continue
+			}
+			err := fileManager.CreateZipFile(msg.FilesToZip, msg.ZipFileName)
+			if err != nil {
+				sendError(conn, "[ERROR]创建zip文件失败: "+err.Error())
+			} else {
+				if err := conn.WriteJSON(Message{Status: "success", Command: "createZip", FilePath: msg.ZipFileName}); err != nil {
+					log.Printf("[ERROR]发送压缩成功消息失败: %v", err)
+				}
+			}
+		case "getConsoleHistory":
+			// 处理终端历史获取命令
+			systemMonitor := GetSystemMonitor()
+			if systemMonitor != nil {
+				history := systemMonitor.GetConsoleHistory()
+				historyStr := ""
+				if len(history) > 0 {
+					historyStr = strings.Join(history, "") // 保持原有换行
+				}
+				if err := conn.WriteJSON(Message{FileContent: historyStr, Command: "getConsoleHistory"}); err != nil {
+					log.Printf("[ERROR]发送终端历史失败: %v", err)
+				}
+			}
+		case "getPanelConfig":
+			// 读取Panel_Setting/config.json
+			fileManager := GetFileManager()
+			content, err := fileManager.ReadFile("Panel_Setting/config.json")
+			if err != nil {
+				sendError(conn, "读取配置失败: "+err.Error())
+				break
+			}
+			if err := conn.WriteJSON(Message{FileContent: content}); err != nil {
+				log.Printf("[ERROR]发送配置内容失败: %v", err)
+			}
+		case "setPanelConfig":
+			// 写入Panel_Setting/config.json，msg.Content为json字符串
+			fileManager := GetFileManager()
+			if err := fileManager.WriteFile("Panel_Setting/config.json", msg.Content); err != nil {
+				sendError(conn, "写入配置失败: "+err.Error())
+				break
+			}
+			if err := conn.WriteJSON(Message{Status: "ok"}); err != nil {
+				log.Printf("[ERROR]发送写入成功消息失败: %v", err)
 			}
 		}
 	}

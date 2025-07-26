@@ -23,7 +23,6 @@
 
 <script setup lang="ts">
 import { ref, watch, onMounted, onUnmounted, nextTick, computed, inject } from 'vue';
-import { useWebSocket } from '../../useWebSocket';
 
 const props = defineProps<{ server?: any }>();
 const commandInput = ref('');
@@ -31,25 +30,25 @@ const outputLines = ref<Array<{ text: string }>>([]);
 const outputRef = ref<HTMLElement | null>(null);
 
 const wsApi = inject('wsApi') as ReturnType<typeof import('../../useWebSocket').useWebSocket>;
-const STORAGE_KEY = computed(() => `terminal_history_${props.server?.wsUrl || ''}`);
 
 // 保存监听器引用以便清理
 let terminalMessageListener: ((data: any) => void) | null = null;
+let systemMessageListener: ((data: any) => void) | null = null;
 
 function ansiToHtml(str: string): string {
   // 完整的ANSI转义序列解析器，支持Windows 10+ CMD的所有颜色、格式和控制字符
   let result = '';
   let currentIndex = 0;
   let currentStyles: string[] = [];
-  
+
   while (currentIndex < str.length) {
     const char = str[currentIndex];
-    
+
     if (char === '\u001b' && str[currentIndex + 1] === '[') {
       // 找到ANSI转义序列
       let endIndex = str.indexOf('m', currentIndex);
       let commandChar = 'm';
-      
+
       // 检查是否有其他命令字符（如K, C, D等）
       if (endIndex === -1) {
         // 查找其他可能的命令字符
@@ -62,30 +61,30 @@ function ansiToHtml(str: string): string {
           }
         }
       }
-      
+
       if (endIndex === -1) {
         result += char;
         currentIndex++;
         continue;
       }
-      
+
       const sequence = str.substring(currentIndex + 2, endIndex);
       const codes = sequence.split(';').map(code => parseInt(code) || 0);
-      
+
       // 处理不同的命令字符
       if (commandChar === 'm') {
         // 处理颜色和格式代码
         let newStyles: string[] = [];
-        
+
         for (let i = 0; i < codes.length; i++) {
           const code = codes[i];
-          
+
           switch (code) {
             // 重置所有属性
             case 0:
               newStyles = [];
               break;
-              
+
             // 文本属性
             case 1: // 粗体
               newStyles.push('font-weight: bold');
@@ -111,7 +110,7 @@ function ansiToHtml(str: string): string {
             case 9: // 删除线
               newStyles.push('text-decoration: line-through');
               break;
-              
+
             // 前景色 (30-37)
             case 30: newStyles.push('color: #000000'); break; // 黑
             case 31: newStyles.push('color: #cd3131'); break; // 红
@@ -121,7 +120,7 @@ function ansiToHtml(str: string): string {
             case 35: newStyles.push('color: #bc3fbc'); break; // 紫
             case 36: newStyles.push('color: #11a8cd'); break; // 青
             case 37: newStyles.push('color: #e5e5e5'); break; // 白
-            
+
             // 前景色高亮 (90-97)
             case 90: newStyles.push('color: #666666'); break; // 亮黑
             case 91: newStyles.push('color: #f14c4c'); break; // 亮红
@@ -131,7 +130,7 @@ function ansiToHtml(str: string): string {
             case 95: newStyles.push('color: #d670d6'); break; // 亮紫
             case 96: newStyles.push('color: #29b8db'); break; // 亮青
             case 97: newStyles.push('color: #ffffff'); break; // 亮白
-            
+
             // 背景色 (40-47)
             case 40: newStyles.push('background-color: #000000'); break; // 黑
             case 41: newStyles.push('background-color: #cd3131'); break; // 红
@@ -141,7 +140,7 @@ function ansiToHtml(str: string): string {
             case 45: newStyles.push('background-color: #bc3fbc'); break; // 紫
             case 46: newStyles.push('background-color: #11a8cd'); break; // 青
             case 47: newStyles.push('background-color: #e5e5e5'); break; // 白
-            
+
             // 背景色高亮 (100-107)
             case 100: newStyles.push('background-color: #666666'); break; // 亮黑
             case 101: newStyles.push('background-color: #f14c4c'); break; // 亮红
@@ -153,7 +152,7 @@ function ansiToHtml(str: string): string {
             case 107: newStyles.push('background-color: #ffffff'); break; // 亮白
           }
         }
-        
+
         // 处理256色模式 (38;5;x 和 48;5;x)
         if (codes.length >= 3 && codes[0] === 38 && codes[1] === 5) {
           const colorIndex = codes[2];
@@ -164,7 +163,7 @@ function ansiToHtml(str: string): string {
           const color = get256Color(colorIndex);
           newStyles.push(`background-color: ${color}`);
         }
-        
+
         // 处理RGB颜色 (38;2;r;g;b 和 48;2;r;g;b)
         if (codes.length >= 5 && codes[0] === 38 && codes[1] === 2) {
           const r = codes[2];
@@ -177,7 +176,7 @@ function ansiToHtml(str: string): string {
           const b = codes[4];
           newStyles.push(`background-color: rgb(${r}, ${g}, ${b})`);
         }
-        
+
         // 更新当前样式
         if (newStyles.length > 0) {
           currentStyles = newStyles;
@@ -206,7 +205,7 @@ function ansiToHtml(str: string): string {
         // 其他未知的控制字符，忽略它们
         // console.log(`忽略未知ANSI控制字符: ${commandChar} with codes:`, codes);
       }
-      
+
       currentIndex = endIndex + 1;
     } else {
       // 普通字符
@@ -218,7 +217,7 @@ function ansiToHtml(str: string): string {
       currentIndex++;
     }
   }
-  
+
   return result;
 }
 
@@ -255,14 +254,14 @@ function escapeHtml(text: string): string {
 function appendLine(raw: string) {
   const html = ansiToHtml(raw);
   outputLines.value.push({ text: html });
-  // 存储到localStorage，最多100条
-  const arr = outputLines.value.slice(-100).map(l => l.text);
-  localStorage.setItem(STORAGE_KEY.value, JSON.stringify(arr));
+  // 只保留100条
+  if (outputLines.value.length > 100) {
+    outputLines.value.splice(0, outputLines.value.length - 100);
+  }
 }
 
 function clearOutput() {
   outputLines.value = [];
-  localStorage.removeItem(STORAGE_KEY.value);
 }
 
 function testColors() {
@@ -298,44 +297,33 @@ function scrollToBottom() {
 
 // 监听 wsApi 消息
 onMounted(() => {
-  // 载入历史
-  const history = localStorage.getItem(STORAGE_KEY.value);
-  if (history) {
-    try {
-      const arr = JSON.parse(history);
-      outputLines.value = arr.map((text: string) => ({ text }));
-    } catch { }
+  // 请求后端终端历史
+  if (wsApi && wsApi.send) {
+    wsApi.send({ command: 'getConsoleHistory' });
   }
 
-  // 添加测试消息和颜色示例
-  // appendLine('终端已初始化，等待连接...');
-  // appendLine('\u001b[32m✓ 彩色文本支持已启用\u001b[0m');
-  // appendLine('\u001b[31m红色文本\u001b[0m \u001b[33m黄色文本\u001b[0m \u001b[34m蓝色文本\u001b[0m');
-  // appendLine('\u001b[1m\u001b[36m粗体青色文本\u001b[0m \u001b[4m下划线文本\u001b[0m');
-  // appendLine('\u001b[38;5;9m256色模式测试\u001b[0m \u001b[48;5;12m背景色测试\u001b[0m');
-  // appendLine('控制字符测试: 文本\u001b[K清除行\u001b[0m');
-  // appendLine('光标移动测试: 开始\u001b[10C中间\u001b[10C结束');
+  // 监听全局系统消息和终端消息
+  const systemBus = (window as any).__SYSTEM_BUS__;
+  const terminalBus = (window as any).__TERMINAL_BUS__;
 
-  // 监听全局终端消息
-  const bus = (window as any).__TERMINAL_BUS__;
-  if (bus && typeof bus.on === 'function') {
-    console.log('Terminal: TerminalBus found, setting up listener'); // 调试日志
-    terminalMessageListener = (data: any) => {
-      console.log('Terminal received message:', data); // 调试日志
-
-      if (typeof data === 'string') {
-        // appendLine(data);
-        // scrollToBottom();
-        return;
-      }
-
+  if (systemBus && typeof systemBus.on === 'function') {
+    systemMessageListener = (data: any) => {
       if (data && typeof data === 'object') {
-        // 过滤掉系统监控和服务器信息消息，这些不应该在终端中显示
-        if (data.systemInfo || data.serverInfo) {
-          // 这些是系统监控消息，不在终端中显示，但允许其他组件接收
-          return;
+        if (data.command === 'getConsoleHistory' && typeof data.fileContent === 'string') {
+          // 渲染历史
+          const arr = data.fileContent.split(/\r?\n/).filter(Boolean);
+          outputLines.value = arr.map((text: string) => ({ text: ansiToHtml(text) }));
+          scrollToBottom();
         }
-        
+      }
+    };
+    systemBus.on('system-message', systemMessageListener);
+  }
+
+  if (terminalBus && typeof terminalBus.on === 'function') {
+    terminalMessageListener = (data: any) => {
+      if (data && typeof data === 'object') {
+        if (data.systemInfo || data.serverInfo) return;
         if (data.output) {
           appendLine(data.output);
         }
@@ -351,49 +339,43 @@ onMounted(() => {
         if (data.message) {
           appendLine(data.message);
         }
-        // 如果没有特定字段，尝试直接显示整个数据
         if (!data.output && !data.error && !data.status && !data.content && !data.message) {
           // appendLine(JSON.stringify(data));
         }
         scrollToBottom();
       }
     };
-    bus.on('terminal-message', terminalMessageListener);
-  } else {
-    console.error('TerminalBus not found or invalid');
-    appendLine('错误: 终端消息总线未初始化');
+    terminalBus.on('terminal-message', terminalMessageListener);
   }
-
   scrollToBottom();
 });
 
 // 组件卸载时清理监听器
 onUnmounted(() => {
-  console.log('Terminal: Component unmounting, cleaning up listeners...');
-  
+  // 清理系统消息监听器
+  if (systemMessageListener) {
+    const systemBus = (window as any).__SYSTEM_BUS__;
+    if (systemBus && typeof systemBus.off === 'function') {
+      systemBus.off('system-message', systemMessageListener);
+    }
+    systemMessageListener = null;
+  }
   // 清理终端消息监听器
   if (terminalMessageListener) {
-    const bus = (window as any).__TERMINAL_BUS__;
-    if (bus && typeof bus.off === 'function') {
-      bus.off('terminal-message', terminalMessageListener);
+    const terminalBus = (window as any).__TERMINAL_BUS__;
+    if (terminalBus && typeof terminalBus.off === 'function') {
+      terminalBus.off('terminal-message', terminalMessageListener);
     }
     terminalMessageListener = null;
   }
-  
-  console.log('Terminal: Listeners cleaned up');
 });
 
-watch(() => props.server, (newServer) => {
-  // 载入新服务器的历史
-  const history = localStorage.getItem(`terminal_history_${newServer?.wsUrl || ''}`);
-  if (history) {
-    try {
-      const arr = JSON.parse(history);
-      outputLines.value = arr.map((text: string) => ({ text }));
-    } catch { }
-  } else {
-    outputLines.value = [];
+watch(() => props.server, () => {
+  // 切换服务器时重新请求终端历史
+  if (wsApi && wsApi.send) {
+    wsApi.send({ command: 'getConsoleHistory' });
   }
+  outputLines.value = [];
   scrollToBottom();
 });
 </script>
@@ -401,12 +383,20 @@ watch(() => props.server, (newServer) => {
 <style scoped>
 /* 闪烁动画 */
 @keyframes blink {
-  0%, 50% { opacity: 1; }
-  51%, 100% { opacity: 0; }
+
+  0%,
+  50% {
+    opacity: 1;
+  }
+
+  51%,
+  100% {
+    opacity: 0;
+  }
 }
 
 .terminal-container {
-  background: #ffffff;
+  /* background: var(--bg-primary); */
   padding: 1.5rem;
   height: 100%;
   display: flex;
@@ -414,7 +404,7 @@ watch(() => props.server, (newServer) => {
 }
 
 .terminal-container h2 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 2rem;
   margin: 0 0 1.5rem 0;
@@ -422,8 +412,8 @@ watch(() => props.server, (newServer) => {
 }
 
 .terminal-output {
-  background: #2c3e50;
-  color: #ecf0f1;
+  background: var(--bg-terminal);
+  color: white;
   padding: 1.2rem;
   border-radius: 8px;
   font-family: 'Courier New', monospace;
@@ -432,7 +422,7 @@ watch(() => props.server, (newServer) => {
   height: 400px;
   overflow-y: auto;
   margin-bottom: 1.5rem;
-  border: 1px solid #34495e;
+  border: 1px solid var(--border-color);
   flex: 1;
 }
 
@@ -441,17 +431,17 @@ watch(() => props.server, (newServer) => {
 }
 
 .terminal-output::-webkit-scrollbar-track {
-  background: #34495e;
+  background: var(--border-color);
   border-radius: 4px;
 }
 
 .terminal-output::-webkit-scrollbar-thumb {
-  background: #7f8c8d;
+  background: var(--text-secondary);
   border-radius: 4px;
 }
 
 .terminal-output::-webkit-scrollbar-thumb:hover {
-  background: #95a5a6;
+  background: var(--text-muted);
 }
 
 .output-line {
@@ -482,20 +472,20 @@ watch(() => props.server, (newServer) => {
 .terminal-input {
   flex: 1;
   padding: 0.8rem 1rem;
-  border: 2px solid #e9ecef;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
   font-family: 'Courier New', monospace;
-  background: #ffffff;
-  color: #2c3e50;
+  background: var(--bg-primary);
+  color: var(--text-primary);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .terminal-input:focus {
   outline: none;
-  border-color: #27ae60;
-  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
-  background: #ffffff;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-light);
+  background: var(--bg-primary);
 }
 
 .send-btn,
@@ -531,50 +521,53 @@ watch(() => props.server, (newServer) => {
 }
 
 .send-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 2px 8px var(--accent-light);
 }
 
 .send-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .send-btn:disabled {
-  background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .clear-btn {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: var(--error-color);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  box-shadow: 0 2px 8px var(--error-color);
 }
 
 .clear-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  box-shadow: 0 4px 12px var(--error-color);
 }
 
 .clear-btn:disabled {
-  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .test-btn {
-  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  background: var(--info-color);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+  box-shadow: 0 2px 8px var(--info-color);
 }
 
 .test-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.4);
+  box-shadow: 0 4px 12px var(--info-color);
 }
 
 .test-btn:disabled {
-  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 </style>

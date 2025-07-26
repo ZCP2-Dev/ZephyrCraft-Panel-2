@@ -55,12 +55,12 @@ function reloadPlugin(pluginName: string) {
 
 <style scoped>
 .plugins-container {
-  background: #ffffff;
+  /* background: var(--bg-primary); */
   padding: 1.5rem;
 }
 
 .plugins-container h2 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 2rem;
   margin: 0 0 1.5rem 0;
@@ -68,7 +68,7 @@ function reloadPlugin(pluginName: string) {
 }
 
 .plugins-container h3 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.4rem;
   margin: 0 0 1.2rem 0;
@@ -88,16 +88,16 @@ function reloadPlugin(pluginName: string) {
   align-items: center;
   justify-content: space-between;
   padding: 1rem 1.2rem;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .plugin-item:hover {
-  background: #ffffff;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.1);
-  border-color: rgba(39, 174, 96, 0.2);
+  background: var(--bg-primary);
+  box-shadow: 0 2px 8px var(--accent-light);
+  border-color: var(--accent-color);
 }
 
 .plugin-info {
@@ -110,7 +110,7 @@ function reloadPlugin(pluginName: string) {
   width: 40px;
   height: 40px;
   border-radius: 8px;
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -126,13 +126,13 @@ function reloadPlugin(pluginName: string) {
 
 .plugin-name {
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-size: 1.1rem;
 }
 
 .plugin-version {
   font-size: 0.9rem;
-  color: #7f8c8d;
+  color: var(--text-secondary);
 }
 
 .plugin-actions {
@@ -150,56 +150,57 @@ function reloadPlugin(pluginName: string) {
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .plugin-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 12px var(--shadow-color-light);
 }
 
 .plugin-btn:disabled {
-  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .enable-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 2px 8px var(--accent-light);
 }
 
 .enable-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .disable-btn {
-  background: linear-gradient(135deg, #e74c3c 0%, #c0392b 100%);
+  background: var(--error-color);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(231, 76, 60, 0.3);
+  box-shadow: 0 2px 8px var(--error-color);
 }
 
 .disable-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.4);
+  box-shadow: 0 4px 12px var(--error-color);
 }
 
 .reload-btn {
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  background: var(--warning-color);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+  box-shadow: 0 2px 8px var(--warning-color);
 }
 
 .reload-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+  box-shadow: 0 4px 12px var(--warning-color);
 }
 
 .no-plugins {
   text-align: center;
   padding: 3rem 2rem;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 1.1rem;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 </style>

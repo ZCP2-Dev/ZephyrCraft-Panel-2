@@ -138,12 +138,12 @@ function testConnection() {
 
 <style scoped>
 .remote-container {
-  background: #ffffff;
+  /* background: var(--bg-primary); */
   padding: 1.5rem;
 }
 
 .remote-container h3 {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.8rem;
   margin: 0 0 1.5rem 0;
@@ -162,30 +162,30 @@ function testConnection() {
   display: block;
   margin-bottom: 0.6rem;
   font-weight: 600;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-size: 1rem;
 }
 
 .form-input {
   width: 100%;
   padding: 0.8rem 1rem;
-  border: 2px solid #e9ecef;
+  border: 2px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  background: #ffffff;
-  color: #2c3e50;
+  background: var(--bg-primary);
+  color: var(--text-primary);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #27ae60;
-  box-shadow: 0 0 0 3px rgba(39, 174, 96, 0.1);
-  background: #ffffff;
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px var(--accent-light);
+  background: var(--bg-primary);
 }
 
 .form-input::placeholder {
-  color: #95a5a6;
+  color: var(--text-muted);
 }
 
 .form-actions {
@@ -224,41 +224,43 @@ function testConnection() {
 }
 
 .save-btn {
-  background: linear-gradient(135deg, #27ae60 0%, #2ecc71 100%);
+  background: var(--accent-gradient);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(39, 174, 96, 0.3);
+  box-shadow: 0 2px 8px var(--accent-light);
 }
 
 .save-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(39, 174, 96, 0.4);
+  box-shadow: 0 4px 12px var(--accent-light);
 }
 
 .save-btn:disabled {
-  background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .test-btn {
-  background: linear-gradient(135deg, #f39c12 0%, #e67e22 100%);
+  background: var(--warning-color);
   color: #fff;
-  box-shadow: 0 2px 8px rgba(243, 156, 18, 0.3);
+  box-shadow: 0 2px 8px var(--warning-color);
 }
 
 .test-btn:hover:not(:disabled) {
-  box-shadow: 0 4px 12px rgba(243, 156, 18, 0.4);
+  box-shadow: 0 4px 12px var(--warning-color);
 }
 
 .test-btn:disabled {
-  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: not-allowed;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 2px 8px var(--shadow-color);
 }
 
 .connection-info {
-  border-top: 2px solid #e9ecef;
+  border-top: 2px solid var(--border-color);
   padding-top: 2rem;
-  background: #f8f9fa;
+  background: var(--bg-secondary);
   border-radius: 8px;
   padding: 1.5rem;
   margin-top: 1.5rem;
@@ -266,7 +268,7 @@ function testConnection() {
 
 .connection-info h4 {
   margin-bottom: 1.2rem;
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 700;
   font-size: 1.3rem;
   text-align: center;
@@ -276,41 +278,41 @@ function testConnection() {
   display: flex;
   margin-bottom: 0.8rem;
   padding: 0.7rem 0.8rem;
-  background: #ffffff;
+  background: var(--bg-primary);
   border-radius: 6px;
-  border: 1px solid #e9ecef;
+  border: 1px solid var(--border-color);
 }
 
 .info-label {
   min-width: 100px;
   font-weight: 600;
-  color: #7f8c8d;
+  color: var(--text-secondary);
   font-size: 0.95rem;
 }
 
 .info-value {
-  color: #2c3e50;
+  color: var(--text-primary);
   font-weight: 500;
   flex: 1;
 }
 
 .info-value.connected {
-  color: #27ae60;
+  color: var(--success-color);
   font-weight: 600;
 }
 
 .info-value.disconnected {
-  color: #e74c3c;
+  color: var(--error-color);
   font-weight: 600;
 }
 
 .info-value.running {
-  color: #27ae60;
+  color: var(--success-color);
   font-weight: 600;
 }
 
 .info-value.stopped {
-  color: #e74c3c;
+  color: var(--error-color);
   font-weight: 600;
 }
 </style> 

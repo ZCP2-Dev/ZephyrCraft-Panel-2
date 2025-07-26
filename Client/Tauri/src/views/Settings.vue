@@ -1,32 +1,17 @@
 <template>
   <div class="settings-container">
-    <h1>设置</h1>
-    <p>这里是设置页面内容</p>
+    <AppSettings />
   </div>
 </template>
+
+<script setup lang="ts">
+import AppSettings from '../components/AppSettings.vue';
+</script>
 
 <style scoped>
 .settings-container {
   padding: 2rem;
-  text-align: center;
-}
-
-h1 {
-  color: #333;
-  margin-bottom: 2rem;
-}
-
-p {
-  color: #666;
-  font-size: 1.1rem;
-}
-
-@media (prefers-color-scheme: dark) {
-  h1 {
-    color: #f0f0f0;
-  }
-  p {
-    color: #ccc;
-  }
+  max-width: 800px;
+  margin: 0 auto;
 }
 </style>
