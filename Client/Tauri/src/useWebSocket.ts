@@ -1,50 +1,151 @@
-import { ref, onUnmounted } from 'vue';
+import { ref, computed, onUnmounted } from 'vue';
 
 export interface UseWebSocketOptions {
-  url: string;
-  password?: string;
+  url: string | (() => string);
+  password?: string | (() => string);
   onMessage?: (data: any) => void;
   onOpen?: () => void;
   onClose?: () => void;
   onError?: (err: Event) => void;
+  onConnecting?: () => void;
+  onConnectFailed?: (error: string) => void;
 }
+
+export type ConnectionStatus = 'disconnected' | 'connecting' | 'connected' | 'failed';
 
 export function useWebSocket(options: UseWebSocketOptions) {
   const ws = ref<WebSocket | null>(null);
-  const isConnected = ref(false);
+  const connectionStatus = ref<ConnectionStatus>('disconnected');
   const lastError = ref<string | null>(null);
+  const isConnecting = ref(false);
   let onMessage: ((data: any) => void) | undefined = options.onMessage;
 
   function connect() {
+    if (isConnecting.value) return; // 防止重复连接
+    
     if (ws.value) {
       ws.value.close();
     }
+    
     let wsUrl = typeof options.url === 'function' ? options.url() : options.url;
+    if (!wsUrl) {
+      lastError.value = 'WebSocket URL 未设置';
+      connectionStatus.value = 'failed';
+      options.onConnectFailed && options.onConnectFailed('WebSocket URL 未设置');
+      return;
+    }
+    
+    isConnecting.value = true;
+    connectionStatus.value = 'connecting';
+    lastError.value = null;
+    options.onConnecting && options.onConnecting();
+    
     if (options.password) {
       wsUrl += (wsUrl.includes('?') ? '&' : '?') + 'password=' + encodeURIComponent(typeof options.password === 'function' ? options.password() : options.password);
     }
-    ws.value = new WebSocket(wsUrl);
+    
+    let connectionTimeout: number | undefined;
+    
+    try {
+      ws.value = new WebSocket(wsUrl);
+      
+      // 设置连接超时
+      connectionTimeout = setTimeout(() => {
+        if (connectionStatus.value === 'connecting') {
+          lastError.value = '连接超时';
+          connectionStatus.value = 'failed';
+          isConnecting.value = false;
+          options.onConnectFailed && options.onConnectFailed('连接超时');
+          if (ws.value) {
+            ws.value.close();
+          }
+        }
+      }, 10000); // 10秒超时
 
-    ws.value.onopen = () => {
-      isConnected.value = true;
-      options.onOpen && options.onOpen();
-    };
-    ws.value.onmessage = (event) => {
-      let data = event.data;
-      try {
-        data = JSON.parse(event.data);
-      } catch {}
-      if (onMessage) onMessage(data);
-      options.onMessage && options.onMessage(data);
-    };
-    ws.value.onclose = () => {
-      isConnected.value = false;
-      options.onClose && options.onClose();
-    };
-    ws.value.onerror = (err) => {
-      lastError.value = 'WebSocket 连接发生错误';
-      options.onError && options.onError(err);
-    };
+      ws.value.onopen = () => {
+        if (connectionTimeout) {
+          clearTimeout(connectionTimeout);
+        }
+        connectionStatus.value = 'connected';
+        isConnecting.value = false;
+        lastError.value = null;
+        console.log('WebSocket connected successfully'); // 调试日志
+        options.onOpen && options.onOpen();
+        
+        // 发送连接成功消息
+        if (window && (window as any).__TERMINAL_BUS__) {
+          (window as any).__TERMINAL_BUS__.emit('terminal-message', 'WebSocket连接成功');
+        }
+        
+        // 查询服务器状态 - 延迟执行，确保连接稳定
+        setTimeout(() => {
+          if (ws.value && connectionStatus.value === 'connected') {
+            console.log('Querying server status after connection'); // 调试日志
+            try {
+              ws.value.send(JSON.stringify({ command: 'status' }));
+            } catch (error) {
+              console.error('Failed to send status query:', error);
+            }
+          }
+        }, 1500);
+      };
+      
+      ws.value.onmessage = (event) => {
+        console.log('WebSocket raw message:', event.data); // 调试日志
+        let data = event.data;
+        try {
+          data = JSON.parse(event.data);
+          console.log('WebSocket parsed message:', data); // 调试日志
+        } catch (error) {
+          console.log('WebSocket message is not JSON, using as string:', event.data); // 调试日志
+          data = event.data;
+        }
+        
+        // 调用消息处理器
+        if (onMessage) {
+          console.log('Calling onMessage handler with:', data); // 调试日志
+          onMessage(data);
+        }
+        if (options.onMessage) {
+          console.log('Calling options.onMessage handler with:', data); // 调试日志
+          options.onMessage(data);
+        }
+      };
+      
+      ws.value.onclose = (event) => {
+        clearTimeout(connectionTimeout);
+        isConnecting.value = false;
+        
+        if (connectionStatus.value === 'connecting') {
+          // 如果还在连接状态就关闭了，说明连接失败
+          connectionStatus.value = 'failed';
+          lastError.value = event.code === 1006 ? '连接被拒绝或网络错误' : `连接关闭 (代码: ${event.code})`;
+          options.onConnectFailed && options.onConnectFailed(lastError.value);
+        } else {
+          connectionStatus.value = 'disconnected';
+        }
+        
+        options.onClose && options.onClose();
+      };
+      
+      ws.value.onerror = (err) => {
+        clearTimeout(connectionTimeout);
+        isConnecting.value = false;
+        connectionStatus.value = 'failed';
+        lastError.value = 'WebSocket 连接发生错误';
+        options.onError && options.onError(err);
+        options.onConnectFailed && options.onConnectFailed('WebSocket 连接发生错误');
+      };
+      
+    } catch (error) {
+      if (connectionTimeout) {
+        clearTimeout(connectionTimeout);
+      }
+      isConnecting.value = false;
+      connectionStatus.value = 'failed';
+      lastError.value = '创建 WebSocket 连接失败';
+      options.onConnectFailed && options.onConnectFailed('创建 WebSocket 连接失败');
+    }
   }
 
   function disconnect() {
@@ -52,10 +153,16 @@ export function useWebSocket(options: UseWebSocketOptions) {
       ws.value.close();
       ws.value = null;
     }
+    connectionStatus.value = 'disconnected';
+    isConnecting.value = false;
+    lastError.value = null;
   }
 
   function send(data: any) {
-    if (ws.value && isConnected.value) {
+    console.log('WebSocket send called with:', data); // 调试日志
+    console.log('Current connection status:', connectionStatus.value); // 调试日志
+    
+    if (ws.value && connectionStatus.value === 'connected') {
       const msg = {
         command: data.command || '',
         content: data.content || '',
@@ -63,13 +170,44 @@ export function useWebSocket(options: UseWebSocketOptions) {
         error: data.error || '',
         status: data.status || ''
       };
+      console.log('Sending message:', msg); // 调试日志
       ws.value.send(JSON.stringify(msg));
+    } else {
+      console.error('Cannot send message: WebSocket not connected or not ready');
+      console.error('ws.value:', !!ws.value, 'connectionStatus:', connectionStatus.value);
     }
   }
 
+  // 兼容性：保持原有的 isConnected 属性
+  const isConnected = computed(() => connectionStatus.value === 'connected');
+
   Object.defineProperty(connect, 'onMessage', {
     get() { return onMessage; },
-    set(fn) { onMessage = fn; }
+    set(fn) {
+      onMessage = fn;
+      if (ws.value) {
+        ws.value.onmessage = (event) => {
+          console.log('WebSocket raw message (from setter):', event.data); // 调试日志
+          let data = event.data;
+          try {
+            data = JSON.parse(event.data);
+            console.log('WebSocket parsed message (from setter):', data); // 调试日志
+          } catch (error) {
+            console.log('WebSocket message is not JSON (from setter), using as string:', event.data); // 调试日志
+            data = event.data;
+          }
+          
+          if (onMessage) {
+            console.log('Calling onMessage handler (from setter) with:', data); // 调试日志
+            onMessage(data);
+          }
+          if (options.onMessage) {
+            console.log('Calling options.onMessage handler (from setter) with:', data); // 调试日志
+            options.onMessage(data);
+          }
+        };
+      }
+    }
   });
 
   onUnmounted(() => {
@@ -79,11 +217,25 @@ export function useWebSocket(options: UseWebSocketOptions) {
   return {
     ws,
     isConnected,
+    connectionStatus,
+    isConnecting,
     lastError,
     connect,
     disconnect,
     send,
     get onMessage() { return onMessage; },
-    set onMessage(fn) { onMessage = fn; },
+    set onMessage(fn) {
+      onMessage = fn;
+      if (ws.value) {
+        ws.value.onmessage = (event) => {
+          let data = event.data;
+          try {
+            data = JSON.parse(event.data);
+          } catch {}
+          if (onMessage) onMessage(data);
+          options.onMessage && options.onMessage(data);
+        };
+      }
+    },
   };
 } 
