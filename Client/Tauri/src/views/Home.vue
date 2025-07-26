@@ -373,21 +373,24 @@ wsApi.onMessage = (data: any) => {
     console.error('Server error:', data.error); // 调试日志
   }
   
-  // 分发到全局终端消息总线（过滤掉系统监控消息）
+  // 分发到全局消息总线
   if (window && (window as any).__TERMINAL_BUS__) {
-    // 过滤掉系统监控、服务器信息和玩家列表消息，这些不应该在终端中显示
-    if (data && typeof data === 'object' && (data.systemInfo || data.serverInfo || data.players)) {
-      // 这些是系统监控和玩家管理消息，只发送给相应的组件，不发送到终端
-      console.log('System/Player monitoring message, not sending to terminal:', data);
+    // 过滤掉系统监控、服务器信息、玩家列表和文件管理消息，这些不应该在终端中显示
+    if (data && typeof data === 'object' && (data.systemInfo || data.serverInfo || data.players || 
+        data.fileList || data.fileContent !== undefined || data.filePath || data.oldPath || data.newPath)) {
+      // 这些是系统监控、玩家管理和文件管理消息，只发送给相应的组件，不发送到终端
+      console.log('System/Player/File monitoring message, not sending to terminal:', data);
       // 发送到专门的消息总线，而不是终端总线
       if ((window as any).__SYSTEM_BUS__) {
         console.log('Home: Emitting to system bus:', data);
         (window as any).__SYSTEM_BUS__.emit('system-message', data);
+        // 同时发送文件相关消息到专门的文件消息总线
+        if (data.fileList || data.fileContent !== undefined || data.filePath || data.oldPath || data.newPath) {
+          (window as any).__SYSTEM_BUS__.emit('file-message', data);
+        }
       } else {
         console.error('Home: SystemBus not available');
       }
-      
-
     } else {
       console.log('Emitting to terminal bus:', data); // 调试日志
       (window as any).__TERMINAL_BUS__.emit('terminal-message', data);

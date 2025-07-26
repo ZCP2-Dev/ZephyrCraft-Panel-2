@@ -5,6 +5,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+
+	"encoding/base64"
 
 	"github.com/gorilla/websocket"
 )
@@ -29,6 +32,13 @@ type Message struct { // 定义与前端交互的消息结构，前后端通过�
 	SystemInfo *SystemInfo `json:"systemInfo,omitempty"` // 系统状态信息
 	ServerInfo *ServerInfo `json:"serverInfo,omitempty"` // 服务器信息
 	Players    []*Player   `json:"players,omitempty"`    // 玩家列表
+
+	// 文件管理相关字段
+	FilePath    string     `json:"filePath,omitempty"`    // 文件路径
+	FileContent string     `json:"fileContent,omitempty"` // 文件内容
+	FileList    []FileInfo `json:"fileList,omitempty"`    // 文件列表
+	OldPath     string     `json:"oldPath,omitempty"`     // 旧路径（重命名用）
+	NewPath     string     `json:"newPath,omitempty"`     // 新路径（重命名用）
 }
 
 // SystemInfo 系统状态信息
@@ -179,6 +189,115 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if isDebug {
 				log.Printf("[Main][DEBUG]发送玩家列表，玩家数量: %d", len(players))
 			}
+
+		// 文件管理相关命令
+		case "getFileList":
+			// 获取文件列表
+			fileManager := GetFileManager()
+			files, err := fileManager.GetFileList(msg.Content)
+			if err != nil {
+				sendError(conn, "[ERROR]获取文件列表失败: "+err.Error())
+			} else {
+				if err := conn.WriteJSON(Message{FileList: files}); err != nil {
+					log.Printf("[ERROR]发送文件列表失败: %v", err)
+				}
+			}
+
+		case "readFile":
+			// 读取文件内容
+			fileManager := GetFileManager()
+			content, err := fileManager.ReadFile(msg.FilePath)
+			if err != nil {
+				sendError(conn, "[ERROR]读取文件失败: "+err.Error())
+			} else {
+				if err := conn.WriteJSON(Message{FileContent: content, FilePath: msg.FilePath}); err != nil {
+					log.Printf("[ERROR]发送文件内容失败: %v", err)
+				}
+			}
+
+		case "writeFile":
+			// 写入文件内容
+			fileManager := GetFileManager()
+			err := fileManager.WriteFile(msg.FilePath, msg.FileContent)
+			if err != nil {
+				sendError(conn, "[ERROR]写入文件失败: "+err.Error())
+			} else {
+				if err := conn.WriteJSON(Message{Status: "success", FilePath: msg.FilePath}); err != nil {
+					log.Printf("[ERROR]发送写入成功消息失败: %v", err)
+				}
+			}
+
+		case "createDirectory":
+			// 创建目录
+			fileManager := GetFileManager()
+			err := fileManager.CreateDirectory(msg.Content)
+			if err != nil {
+				sendError(conn, "[ERROR]创建目录失败: "+err.Error())
+			} else {
+				if err := conn.WriteJSON(Message{Status: "success"}); err != nil {
+					log.Printf("[ERROR]发送创建成功消息失败: %v", err)
+				}
+			}
+
+		case "deleteFile":
+			// 删除文件或目录
+			fileManager := GetFileManager()
+			err := fileManager.DeleteFile(msg.Content)
+			if err != nil {
+				sendError(conn, "[ERROR]删除文件失败: "+err.Error())
+			} else {
+				if err := conn.WriteJSON(Message{Status: "success"}); err != nil {
+					log.Printf("[ERROR]发送删除成功消息失败: %v", err)
+				}
+			}
+
+		case "renameFile":
+			// 重命名文件或目录
+			fileManager := GetFileManager()
+			err := fileManager.RenameFile(msg.OldPath, msg.NewPath)
+			if err != nil {
+				sendError(conn, "[ERROR]重命名文件失败: "+err.Error())
+			} else {
+				if err := conn.WriteJSON(Message{Status: "success"}); err != nil {
+					log.Printf("[ERROR]发送重命名成功消息失败: %v", err)
+				}
+			}
+		case "downloadFile":
+			fileManager := GetFileManager()
+			fullPath := msg.FilePath
+			if fullPath == "" {
+				sendError(conn, "[ERROR]未指定文件路径")
+				continue
+			}
+			// 读取文件内容
+			content, err := fileManager.ReadFileRaw(fullPath)
+			if err != nil {
+				sendError(conn, "[ERROR]下载文件失败: "+err.Error())
+				continue
+			}
+			b64 := base64.StdEncoding.EncodeToString(content)
+			if err := conn.WriteJSON(Message{FileContent: b64, FilePath: msg.FilePath, Status: "download", Output: "download", Content: msg.FilePath}); err != nil {
+				log.Printf("[ERROR]发送下载文件内容失败: %v", err)
+			}
+		case "uploadFile":
+			fileManager := GetFileManager()
+			if msg.FilePath == "" || msg.FileContent == "" {
+				sendError(conn, "[ERROR]未指定文件路径或内容")
+				continue
+			}
+			data, err := base64.StdEncoding.DecodeString(msg.FileContent)
+			if err != nil {
+				sendError(conn, "[ERROR]文件内容解码失败: "+err.Error())
+				continue
+			}
+			err = fileManager.WriteFileRaw(msg.FilePath, data)
+			if err != nil {
+				sendError(conn, "[ERROR]上传文件失败: "+err.Error())
+			} else {
+				if err := conn.WriteJSON(Message{Status: "success", FilePath: msg.FilePath}); err != nil {
+					log.Printf("[ERROR]发送上传成功消息失败: %v", err)
+				}
+			}
 		}
 	}
 }
@@ -198,6 +317,22 @@ func main() {
 		log.Println("[ZephyCraft-Panel-2]现正于调试模式下运行")
 	}
 	config = readConfig() // 读取配置文件内容到 config 变量
+
+	// 初始化文件管理器为ServerPath的父目录
+	serverDir := config.ServerPath
+	if serverDir != "" {
+		parentDir := serverDir
+		if stat, err := os.Stat(serverDir); err == nil && !stat.IsDir() {
+			parentDir = filepath.Dir(serverDir)
+		} else if err == nil && stat.IsDir() {
+			parentDir = serverDir
+		} else {
+			log.Printf("[WARN] ServerPath无效，文件管理器根目录使用默认值")
+		}
+		InitFileManager(parentDir)
+	} else {
+		InitFileManager(".")
+	}
 
 	// 注册 WebSocket 路由，当访问 /ws 路径时，调用 handleWebSocket 函数处理
 	http.HandleFunc("/ws", handleWebSocket)

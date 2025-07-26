@@ -20,6 +20,29 @@ export function useWebSocket(options: UseWebSocketOptions) {
   const isConnecting = ref(false);
   let onMessage: ((data: any) => void) | undefined = options.onMessage;
 
+  // 统一的消息处理函数
+  function handleMessage(event: MessageEvent) {
+    console.log('WebSocket raw message:', event.data); // 调试日志
+    let data = event.data;
+    try {
+      data = JSON.parse(event.data);
+      console.log('WebSocket parsed message:', data); // 调试日志
+    } catch (error) {
+      console.log('WebSocket message is not JSON, using as string:', event.data); // 调试日志
+      data = event.data;
+    }
+    
+    // 调用消息处理器 - 确保两个回调都被调用
+    if (onMessage) {
+      console.log('Calling onMessage handler with:', data); // 调试日志
+      onMessage(data);
+    }
+    if (options.onMessage) {
+      console.log('Calling options.onMessage handler with:', data); // 调试日志
+      options.onMessage(data);
+    }
+  }
+
   function connect() {
     console.log('WebSocket connect called, current status:', connectionStatus.value, 'isConnecting:', isConnecting.value);
     
@@ -93,27 +116,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
         // 这样可以避免重复查询和潜在的冲突
       };
       
-      ws.value.onmessage = (event) => {
-        console.log('WebSocket raw message:', event.data); // 调试日志
-        let data = event.data;
-        try {
-          data = JSON.parse(event.data);
-          console.log('WebSocket parsed message:', data); // 调试日志
-        } catch (error) {
-          console.log('WebSocket message is not JSON, using as string:', event.data); // 调试日志
-          data = event.data;
-        }
-        
-        // 调用消息处理器
-        if (onMessage) {
-          console.log('Calling onMessage handler with:', data); // 调试日志
-          onMessage(data);
-        }
-        if (options.onMessage) {
-          console.log('Calling options.onMessage handler with:', data); // 调试日志
-          options.onMessage(data);
-        }
-      };
+      // 使用统一的消息处理函数
+      ws.value.onmessage = handleMessage;
       
       ws.value.onclose = (event) => {
         console.log('WebSocket onclose event, code:', event.code, 'reason:', event.reason);
@@ -193,34 +197,35 @@ export function useWebSocket(options: UseWebSocketOptions) {
   // 兼容性：保持原有的 isConnected 属性
   const isConnected = computed(() => connectionStatus.value === 'connected');
 
-  Object.defineProperty(connect, 'onMessage', {
-    get() { return onMessage; },
-    set(fn) {
-      onMessage = fn;
-      if (ws.value) {
-        ws.value.onmessage = (event) => {
-          console.log('WebSocket raw message (from setter):', event.data); // 调试日志
-          let data = event.data;
-          try {
-            data = JSON.parse(event.data);
-            console.log('WebSocket parsed message (from setter):', data); // 调试日志
-          } catch (error) {
-            console.log('WebSocket message is not JSON (from setter), using as string:', event.data); // 调试日志
-            data = event.data;
-          }
-          
-          if (onMessage) {
-            console.log('Calling onMessage handler (from setter) with:', data); // 调试日志
-            onMessage(data);
-          }
-          if (options.onMessage) {
-            console.log('Calling options.onMessage handler (from setter) with:', data); // 调试日志
-            options.onMessage(data);
-          }
-        };
-      }
-    }
-  });
+  // 移除Object.defineProperty，因为它会导致onmessage处理器冲突
+  // Object.defineProperty(connect, 'onMessage', {
+  //   get() { return onMessage; },
+  //   set(fn) {
+  //     onMessage = fn;
+  //     if (ws.value) {
+  //       ws.value.onmessage = (event) => {
+  //         console.log('WebSocket raw message (from setter):', event.data); // 调试日志
+  //         let data = event.data;
+  //         try {
+  //           data = JSON.parse(event.data);
+  //           console.log('WebSocket parsed message (from setter):', data); // 调试日志
+  //         } catch (error) {
+  //           console.log('WebSocket message is not JSON (from setter), using as string:', event.data); // 调试日志
+  //           data = event.data;
+  //         }
+  //         
+  //         if (onMessage) {
+  //           console.log('Calling onMessage handler (from setter) with:', data); // 调试日志
+  //           onMessage(data);
+  //         }
+  //         if (options.onMessage) {
+  //           console.log('Calling options.onMessage handler (from setter) with:', data); // 调试日志
+  //           options.onMessage(data);
+  //         }
+  //       };
+  //     }
+  //   }
+  // });
 
   onUnmounted(() => {
     disconnect();
@@ -238,16 +243,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
     get onMessage() { return onMessage; },
     set onMessage(fn) {
       onMessage = fn;
-      if (ws.value) {
-        ws.value.onmessage = (event) => {
-          let data = event.data;
-          try {
-            data = JSON.parse(event.data);
-          } catch {}
-          if (onMessage) onMessage(data);
-          options.onMessage && options.onMessage(data);
-        };
-      }
+      // 不再重新设置ws.value.onmessage，使用统一的消息处理函数
+      // 这样可以确保两个回调都能被正确调用
     },
   };
 } 
