@@ -103,13 +103,22 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			}
 		case "stop":
 			// 处理停止命令，调用进程管理器的 StopProcess 方法
-			if err := pm.SendCommand("stop"); err != nil {
+			if err := pm.StopProcess(); err != nil {
 				sendError(conn, "[ERROR]停止进程失败: "+err.Error())
 			}
 		case "input":
 			// 处理输入命令，调用进程管理器的 SendCommand 方法
 			if err := pm.SendCommand(msg.Content); err != nil {
 				sendError(conn, "[ERROR]发送命令失败: "+err.Error())
+			}
+		case "status":
+			// 处理状态查询命令，返回当前进程状态
+			status := "stopped"
+			if pm.IsRunning() {
+				status = "running"
+			}
+			if err := conn.WriteJSON(Message{Status: status}); err != nil {
+				log.Printf("[ERROR]发送状态消息失败: %v", err)
 			}
 		}
 	}

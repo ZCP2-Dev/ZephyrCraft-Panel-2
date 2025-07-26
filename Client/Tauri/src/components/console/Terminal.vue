@@ -14,6 +14,9 @@
       <button @click="clearOutput" class="clear-btn">
         <IconMdiDelete style="margin-right: 5px;" />清除
       </button>
+      <button @click="testColors" class="test-btn" style="display: none;">
+        <IconMdiPalette style="margin-right: 5px;" />测试颜色
+      </button>
     </div>
   </div>
 </template>
@@ -31,17 +34,180 @@ const wsApi = inject('wsApi') as ReturnType<typeof import('../../useWebSocket').
 const STORAGE_KEY = computed(() => `terminal_history_${props.server?.wsUrl || ''}`);
 
 function ansiToHtml(str: string): string {
-  // 只支持常见的 38;5;X 颜色序列，简化实现
-  // 例如：\u001b[38;5;9m红色  \u001b[38;5;15m白色  \u001b[m重置
-  const colorMap: Record<string, string> = {
-    '9': '#ff6b6b', // 红
-    '15': '#ffffff', // 白
-    // 可扩展更多
-  };
-  return str
-    .replace(/\u001b\[38;5;(\d+)m/g, (_, color) => `<span style=\"color:${colorMap[color] || '#fff'}\">`)
-    .replace(/\u001b\[m/g, '</span>')
-    .replace(/\u001b\[[0-9;]*m/g, '</span>'); // 其它重置
+  // 完整的ANSI转义序列解析器，支持Windows 10+ CMD的所有颜色和格式
+  let result = '';
+  let currentIndex = 0;
+  let currentStyles: string[] = [];
+  
+  while (currentIndex < str.length) {
+    const char = str[currentIndex];
+    
+    if (char === '\u001b' && str[currentIndex + 1] === '[') {
+      // 找到ANSI转义序列
+      const endIndex = str.indexOf('m', currentIndex);
+      if (endIndex === -1) {
+        result += char;
+        currentIndex++;
+        continue;
+      }
+      
+      const sequence = str.substring(currentIndex + 2, endIndex);
+      const codes = sequence.split(';').map(code => parseInt(code) || 0);
+      
+      // 处理ANSI代码
+      let newStyles: string[] = [];
+      
+      for (let i = 0; i < codes.length; i++) {
+        const code = codes[i];
+        
+        switch (code) {
+          // 重置所有属性
+          case 0:
+            newStyles = [];
+            break;
+            
+          // 文本属性
+          case 1: // 粗体
+            newStyles.push('font-weight: bold');
+            break;
+          case 2: // 暗淡
+            newStyles.push('opacity: 0.6');
+            break;
+          case 3: // 斜体
+            newStyles.push('font-style: italic');
+            break;
+          case 4: // 下划线
+            newStyles.push('text-decoration: underline');
+            break;
+          case 5: // 闪烁
+            newStyles.push('animation: blink 1s infinite');
+            break;
+          case 7: // 反显
+            newStyles.push('background-color: currentColor; color: #2c3e50');
+            break;
+          case 8: // 隐藏
+            newStyles.push('visibility: hidden');
+            break;
+          case 9: // 删除线
+            newStyles.push('text-decoration: line-through');
+            break;
+            
+          // 前景色 (30-37)
+          case 30: newStyles.push('color: #000000'); break; // 黑
+          case 31: newStyles.push('color: #cd3131'); break; // 红
+          case 32: newStyles.push('color: #0dbc79'); break; // 绿
+          case 33: newStyles.push('color: #e5e510'); break; // 黄
+          case 34: newStyles.push('color: #2472c8'); break; // 蓝
+          case 35: newStyles.push('color: #bc3fbc'); break; // 紫
+          case 36: newStyles.push('color: #11a8cd'); break; // 青
+          case 37: newStyles.push('color: #e5e5e5'); break; // 白
+          
+          // 前景色高亮 (90-97)
+          case 90: newStyles.push('color: #666666'); break; // 亮黑
+          case 91: newStyles.push('color: #f14c4c'); break; // 亮红
+          case 92: newStyles.push('color: #23d18b'); break; // 亮绿
+          case 93: newStyles.push('color: #f5f543'); break; // 亮黄
+          case 94: newStyles.push('color: #3b8eea'); break; // 亮蓝
+          case 95: newStyles.push('color: #d670d6'); break; // 亮紫
+          case 96: newStyles.push('color: #29b8db'); break; // 亮青
+          case 97: newStyles.push('color: #ffffff'); break; // 亮白
+          
+          // 背景色 (40-47)
+          case 40: newStyles.push('background-color: #000000'); break; // 黑
+          case 41: newStyles.push('background-color: #cd3131'); break; // 红
+          case 42: newStyles.push('background-color: #0dbc79'); break; // 绿
+          case 43: newStyles.push('background-color: #e5e510'); break; // 黄
+          case 44: newStyles.push('background-color: #2472c8'); break; // 蓝
+          case 45: newStyles.push('background-color: #bc3fbc'); break; // 紫
+          case 46: newStyles.push('background-color: #11a8cd'); break; // 青
+          case 47: newStyles.push('background-color: #e5e5e5'); break; // 白
+          
+          // 背景色高亮 (100-107)
+          case 100: newStyles.push('background-color: #666666'); break; // 亮黑
+          case 101: newStyles.push('background-color: #f14c4c'); break; // 亮红
+          case 102: newStyles.push('background-color: #23d18b'); break; // 亮绿
+          case 103: newStyles.push('background-color: #f5f543'); break; // 亮黄
+          case 104: newStyles.push('background-color: #3b8eea'); break; // 亮蓝
+          case 105: newStyles.push('background-color: #d670d6'); break; // 亮紫
+          case 106: newStyles.push('background-color: #29b8db'); break; // 亮青
+          case 107: newStyles.push('background-color: #ffffff'); break; // 亮白
+        }
+      }
+      
+      // 处理256色模式 (38;5;x 和 48;5;x)
+      if (codes.length >= 3 && codes[0] === 38 && codes[1] === 5) {
+        const colorIndex = codes[2];
+        const color = get256Color(colorIndex);
+        newStyles.push(`color: ${color}`);
+      } else if (codes.length >= 3 && codes[0] === 48 && codes[1] === 5) {
+        const colorIndex = codes[2];
+        const color = get256Color(colorIndex);
+        newStyles.push(`background-color: ${color}`);
+      }
+      
+      // 处理RGB颜色 (38;2;r;g;b 和 48;2;r;g;b)
+      if (codes.length >= 5 && codes[0] === 38 && codes[1] === 2) {
+        const r = codes[2];
+        const g = codes[3];
+        const b = codes[4];
+        newStyles.push(`color: rgb(${r}, ${g}, ${b})`);
+      } else if (codes.length >= 5 && codes[0] === 48 && codes[1] === 2) {
+        const r = codes[2];
+        const g = codes[3];
+        const b = codes[4];
+        newStyles.push(`background-color: rgb(${r}, ${g}, ${b})`);
+      }
+      
+      // 更新当前样式
+      if (newStyles.length > 0) {
+        currentStyles = newStyles;
+      } else {
+        currentStyles = [];
+      }
+      
+      currentIndex = endIndex + 1;
+    } else {
+      // 普通字符
+      if (currentStyles.length > 0) {
+        result += `<span style="${currentStyles.join('; ')}">${escapeHtml(char)}</span>`;
+      } else {
+        result += escapeHtml(char);
+      }
+      currentIndex++;
+    }
+  }
+  
+  return result;
+}
+
+// 获取256色模式的颜色值
+function get256Color(index: number): string {
+  if (index < 16) {
+    // 标准16色
+    const colors = [
+      '#000000', '#cd3131', '#0dbc79', '#e5e510', '#2472c8', '#bc3fbc', '#11a8cd', '#e5e5e5',
+      '#666666', '#f14c4c', '#23d18b', '#f5f543', '#3b8eea', '#d670d6', '#29b8db', '#ffffff'
+    ];
+    return colors[index] || '#ffffff';
+  } else if (index < 232) {
+    // 216色立方体
+    const cubeIndex = index - 16;
+    const r = Math.floor(cubeIndex / 36) * 51;
+    const g = Math.floor((cubeIndex % 36) / 6) * 51;
+    const b = (cubeIndex % 6) * 51;
+    return `rgb(${r}, ${g}, ${b})`;
+  } else {
+    // 24级灰度
+    const gray = (index - 232) * 10 + 8;
+    return `rgb(${gray}, ${gray}, ${gray})`;
+  }
+}
+
+// HTML转义函数
+function escapeHtml(text: string): string {
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
 }
 
 function appendLine(raw: string) {
@@ -57,13 +223,24 @@ function clearOutput() {
   localStorage.removeItem(STORAGE_KEY.value);
 }
 
+function testColors() {
+  appendLine('\n=== ANSI颜色测试 ===');
+  appendLine('\u001b[31m红色文本\u001b[0m \u001b[32m绿色文本\u001b[0m \u001b[33m黄色文本\u001b[0m \u001b[34m蓝色文本\u001b[0m');
+  appendLine('\u001b[35m紫色文本\u001b[0m \u001b[36m青色文本\u001b[0m \u001b[37m白色文本\u001b[0m \u001b[30m黑色文本\u001b[0m');
+  appendLine('\u001b[1m\u001b[31m粗体红色\u001b[0m \u001b[4m\u001b[32m下划线绿色\u001b[0m \u001b[3m\u001b[33m斜体黄色\u001b[0m');
+  appendLine('\u001b[38;5;9m256色红色\u001b[0m \u001b[48;5;12m256色背景\u001b[0m \u001b[38;2;255;100;100mRGB红色\u001b[0m');
+  appendLine('\u001b[7m反显文本\u001b[0m \u001b[9m删除线\u001b[0m \u001b[5m闪烁文本\u001b[0m');
+  appendLine('=== 测试完成 ===\n');
+  scrollToBottom();
+}
+
 const isConnected = computed(() => wsApi?.isConnected && typeof wsApi.isConnected === 'object' ? wsApi.isConnected.value : wsApi.isConnected);
 
 function sendCommand() {
   if (!commandInput.value.trim() || !isConnected.value) return;
 
-  const command = commandInput.value;
-  wsApi.send({ command });
+  const message = commandInput.value;
+  wsApi.send({ command: 'input', content: message });
   commandInput.value = '';
 }
 
@@ -86,8 +263,12 @@ onMounted(() => {
     } catch { }
   }
 
-  // 添加测试消息
+  // 添加测试消息和颜色示例
   appendLine('终端已初始化，等待连接...');
+  appendLine('\u001b[32m✓ 彩色文本支持已启用\u001b[0m');
+  appendLine('\u001b[31m红色文本\u001b[0m \u001b[33m黄色文本\u001b[0m \u001b[34m蓝色文本\u001b[0m');
+  appendLine('\u001b[1m\u001b[36m粗体青色文本\u001b[0m \u001b[4m下划线文本\u001b[0m');
+  appendLine('\u001b[38;5;9m256色模式测试\u001b[0m \u001b[48;5;12m背景色测试\u001b[0m');
 
   // 监听全局终端消息
   const bus = (window as any).__TERMINAL_BUS__;
@@ -149,6 +330,12 @@ watch(() => props.server, (newServer) => {
 </script>
 
 <style scoped>
+/* 闪烁动画 */
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0; }
+}
+
 .terminal-container {
   background: #ffffff;
   padding: 1.5rem;
@@ -206,6 +393,15 @@ watch(() => props.server, (newServer) => {
 .ansi-line span {
   font-family: inherit;
   font-size: inherit;
+  display: inline;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+/* 确保彩色文本在深色背景上清晰可见 */
+.terminal-output .ansi-line span {
+  border-radius: 2px;
+  padding: 0 1px;
 }
 
 .terminal-input-container {
@@ -292,6 +488,22 @@ watch(() => props.server, (newServer) => {
 }
 
 .clear-btn:disabled {
+  background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
+  cursor: not-allowed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.test-btn {
+  background: linear-gradient(135deg, #9b59b6 0%, #8e44ad 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px rgba(155, 89, 182, 0.3);
+}
+
+.test-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(155, 89, 182, 0.4);
+}
+
+.test-btn:disabled {
   background: linear-gradient(135deg, #ecf0f1 0%, #bdc3c7 100%);
   cursor: not-allowed;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);

@@ -37,8 +37,16 @@ func (pm *ProcessManager) StartProcess(serverPath string) error {
 	pm.mu.Lock()         // 加锁，避免并发操作进程状态
 	defer pm.mu.Unlock() // 函数结束后自动解锁
 
+	// 如果进程正在运行，先停止它
 	if pm.running {
-		return nil // 进程已经在运行，直接返回，避免重复启动
+		if err := pm.cmd.Process.Kill(); err != nil {
+			return err
+		}
+		pm.cmd.Wait()
+		pm.cmd = nil
+		pm.stdout = nil
+		pm.stdin = nil
+		pm.running = false
 	}
 
 	// 创建命令对象，指定要执行的程序（pty-proxy.exe）和参数（serverPath 即实际要启动的服务路径）
@@ -86,7 +94,15 @@ func (pm *ProcessManager) StopProcess() error {
 		return err // 终止失败，返回错误
 	}
 
+	// 等待进程完全退出
+	pm.cmd.Wait()
+
+	// 清理资源
+	pm.cmd = nil
+	pm.stdout = nil
+	pm.stdin = nil
 	pm.running = false // 标记进程已停止
+
 	// 停止后推送 stopped 状态
 	pm.sendMessage(Message{Status: "stopped"})
 	return nil // 停止成功，返回 nil
@@ -149,4 +165,11 @@ func (pm *ProcessManager) UpdateConnection(conn *websocket.Conn) { // 在重连�
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 	pm.conn = conn
+}
+
+// IsRunning 返回进程是否正在运行
+func (pm *ProcessManager) IsRunning() bool {
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+	return pm.running
 }
