@@ -24,6 +24,33 @@ type Message struct { // 定义与前端交互的消息结构，前后端通过�
 	Output  string `json:"output"`  // 服务程序输出内容
 	Error   string `json:"error"`   // 错误信息，传递过程中出现错误时使用
 	Status  string `json:"status"`  // 服务状态，如 "running"、"stopped"
+
+	// 新增字段：系统状态信息
+	SystemInfo *SystemInfo `json:"systemInfo,omitempty"` // 系统状态信息
+	ServerInfo *ServerInfo `json:"serverInfo,omitempty"` // 服务器信息
+	Players    []*Player   `json:"players,omitempty"`    // 玩家列表
+}
+
+// SystemInfo 系统状态信息
+type SystemInfo struct {
+	CPUUsage    float64 `json:"cpuUsage"`    // CPU使用率
+	MemoryUsage float64 `json:"memoryUsage"` // 内存使用率
+	MemoryTotal uint64  `json:"memoryTotal"` // 总内存(MB)
+	MemoryUsed  uint64  `json:"memoryUsed"`  // 已用内存(MB)
+	DiskUsage   float64 `json:"diskUsage"`   // 磁盘使用率
+	DiskTotal   uint64  `json:"diskTotal"`   // 总磁盘空间(MB)
+	DiskUsed    uint64  `json:"diskUsed"`    // 已用磁盘空间(MB)
+	Uptime      uint64  `json:"uptime"`      // 系统运行时间(秒)
+}
+
+// ServerInfo 服务器信息
+type ServerInfo struct {
+	Version     string  `json:"version"`     // 服务器版本
+	StartTime   string  `json:"startTime"`   // 启动时间
+	PlayerCount int     `json:"playerCount"` // 在线玩家数
+	MaxPlayers  int     `json:"maxPlayers"`  // 最大玩家数
+	TPS         float64 `json:"tps"`         // 每秒刻数
+	Uptime      uint64  `json:"uptime"`      // 服务器运行时间(秒)
 }
 
 // WebSocket 升级配置，用于将 HTTP 连接升级为 WebSocket 连接
@@ -117,8 +144,40 @@ func handleWebSocket(w http.ResponseWriter, r *http.Request) {
 			if pm.IsRunning() {
 				status = "running"
 			}
+			// 直接发送到WebSocket，不通过ProcessManager
 			if err := conn.WriteJSON(Message{Status: status}); err != nil {
 				log.Printf("[ERROR]发送状态消息失败: %v", err)
+			}
+		case "getSystemInfo":
+			// 处理系统信息查询命令
+			systemMonitor := GetSystemMonitor()
+			if systemMonitor != nil {
+				systemInfo := systemMonitor.GetSystemInfo()
+				// 直接发送到WebSocket，不通过ProcessManager
+				if err := conn.WriteJSON(Message{SystemInfo: systemInfo}); err != nil {
+					log.Printf("[ERROR]发送系统信息失败: %v", err)
+				}
+			}
+		case "getServerInfo":
+			// 处理服务器信息查询命令
+			systemMonitor := GetSystemMonitor()
+			if systemMonitor != nil {
+				serverInfo := systemMonitor.GetServerInfo()
+				// 直接发送到WebSocket，不通过ProcessManager
+				if err := conn.WriteJSON(Message{ServerInfo: serverInfo}); err != nil {
+					log.Printf("[ERROR]发送服务器信息失败: %v", err)
+				}
+			}
+		case "getPlayers":
+			// 处理玩家列表查询命令
+			playerManager := GetPlayerManager()
+			players := playerManager.GetPlayers()
+			// 直接发送到WebSocket连接
+			if err := conn.WriteJSON(Message{Players: players}); err != nil {
+				log.Printf("[ERROR]发送玩家列表失败: %v", err)
+			}
+			if isDebug {
+				log.Printf("[Main][DEBUG]发送玩家列表，玩家数量: %d", len(players))
 			}
 		}
 	}

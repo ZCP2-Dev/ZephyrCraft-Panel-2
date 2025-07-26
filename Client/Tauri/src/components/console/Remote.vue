@@ -53,7 +53,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, inject, onMounted } from 'vue';
+import { ref, computed, inject, onMounted, onUnmounted } from 'vue';
 
 const props = defineProps<{ server?: any }>();
 const wsApi = inject('wsApi') as any;
@@ -62,6 +62,9 @@ const isRunning = ref(false);
 
 const newWsUrl = ref('');
 const newPassword = ref('');
+
+// 保存监听器引用以便清理
+let terminalMessageListener: ((data: any) => void) | null = null;
 
 const isValid = computed(() => {
   return newWsUrl.value.trim() && newPassword.value.trim();
@@ -75,12 +78,29 @@ onMounted(() => {
   // 监听服务器状态
   const bus = (window as any).__TERMINAL_BUS__;
   if (bus && typeof bus.on === 'function') {
-    bus.on('terminal-message', (data: any) => {
+    terminalMessageListener = (data: any) => {
       if (data && data.status) {
         isRunning.value = data.status === 'running';
       }
-    });
+    };
+    bus.on('terminal-message', terminalMessageListener);
   }
+});
+
+// 组件卸载时清理监听器
+onUnmounted(() => {
+  console.log('Remote: Component unmounting, cleaning up listeners...');
+  
+  // 清理终端消息监听器
+  if (terminalMessageListener) {
+    const bus = (window as any).__TERMINAL_BUS__;
+    if (bus && typeof bus.off === 'function') {
+      bus.off('terminal-message', terminalMessageListener);
+    }
+    terminalMessageListener = null;
+  }
+  
+  console.log('Remote: Listeners cleaned up');
 });
 
 function saveSettings() {

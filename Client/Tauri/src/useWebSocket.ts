@@ -21,10 +21,22 @@ export function useWebSocket(options: UseWebSocketOptions) {
   let onMessage: ((data: any) => void) | undefined = options.onMessage;
 
   function connect() {
-    if (isConnecting.value) return; // 防止重复连接
+    console.log('WebSocket connect called, current status:', connectionStatus.value, 'isConnecting:', isConnecting.value);
+    
+    if (isConnecting.value) {
+      console.log('WebSocket already connecting, ignoring connect call');
+      return; // 防止重复连接
+    }
     
     if (ws.value) {
+      console.log('Closing existing WebSocket connection');
+      // 临时设置状态为connecting，避免触发重连逻辑
+      const oldStatus = connectionStatus.value;
+      connectionStatus.value = 'connecting';
       ws.value.close();
+      ws.value = null;
+      // 恢复原状态，让新的连接流程继续
+      connectionStatus.value = oldStatus;
     }
     
     let wsUrl = typeof options.url === 'function' ? options.url() : options.url;
@@ -77,17 +89,8 @@ export function useWebSocket(options: UseWebSocketOptions) {
           (window as any).__TERMINAL_BUS__.emit('terminal-message', 'WebSocket连接成功');
         }
         
-        // 查询服务器状态 - 延迟执行，确保连接稳定
-        setTimeout(() => {
-          if (ws.value && connectionStatus.value === 'connected') {
-            console.log('Querying server status after connection'); // 调试日志
-            try {
-              ws.value.send(JSON.stringify({ command: 'status' }));
-            } catch (error) {
-              console.error('Failed to send status query:', error);
-            }
-          }
-        }, 1500);
+        // 移除自动状态查询，让Home.vue统一管理状态查询
+        // 这样可以避免重复查询和潜在的冲突
       };
       
       ws.value.onmessage = (event) => {
@@ -113,6 +116,7 @@ export function useWebSocket(options: UseWebSocketOptions) {
       };
       
       ws.value.onclose = (event) => {
+        console.log('WebSocket onclose event, code:', event.code, 'reason:', event.reason);
         clearTimeout(connectionTimeout);
         isConnecting.value = false;
         
@@ -120,9 +124,11 @@ export function useWebSocket(options: UseWebSocketOptions) {
           // 如果还在连接状态就关闭了，说明连接失败
           connectionStatus.value = 'failed';
           lastError.value = event.code === 1006 ? '连接被拒绝或网络错误' : `连接关闭 (代码: ${event.code})`;
+          console.log('WebSocket connection failed:', lastError.value);
           options.onConnectFailed && options.onConnectFailed(lastError.value);
         } else {
           connectionStatus.value = 'disconnected';
+          console.log('WebSocket connection closed normally');
         }
         
         options.onClose && options.onClose();
@@ -149,13 +155,19 @@ export function useWebSocket(options: UseWebSocketOptions) {
   }
 
   function disconnect() {
+    console.log('WebSocket disconnect called, current status:', connectionStatus.value);
+    
     if (ws.value) {
+      console.log('Closing WebSocket connection');
       ws.value.close();
       ws.value = null;
     }
+    
     connectionStatus.value = 'disconnected';
     isConnecting.value = false;
     lastError.value = null;
+    
+    console.log('WebSocket disconnected, status reset to:', connectionStatus.value);
   }
 
   function send(data: any) {

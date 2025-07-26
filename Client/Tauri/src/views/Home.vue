@@ -49,7 +49,7 @@
             </div>
             
             <!-- 连接失败或断开时显示重连控件 -->
-            <div v-if="(connectionStatus === 'failed' || connectionStatus === 'disconnected') && reconnectAttempts >= 1" class="reconnect-controls">
+            <div v-if="(connectionStatus === 'failed' || connectionStatus === 'disconnected')" class="reconnect-controls">
               <div class="error-message">{{ lastError || '连接已断开' }}</div>
               <div class="reconnect-buttons">
                 <button @click="manualReconnect" class="reconnect-btn" :disabled="isConnecting">
@@ -57,6 +57,11 @@
                   <IconMdiLoading v-else class="spin" style="margin-right: 5px;" />
                   {{ isConnecting ? '重连中...' : '重连' }}
                 </button>
+                <!-- <button @click="manualConnect" class="connect-btn" :disabled="isConnecting || !currentServer">
+                  <IconMdiConnection v-if="!isConnecting" style="margin-right: 5px;" />
+                  <IconMdiLoading v-else class="spin" style="margin-right: 5px;" />
+                  {{ isConnecting ? '连接中...' : '连接' }}
+                </button> -->
                 <button @click="resetConnection" class="reset-btn">
                   <IconMdiClose style="margin-right: 5px;" />重置
                 </button>
@@ -95,13 +100,13 @@
 </div>
     </div>
     <div class="main-content">
-      <component :is="currentComponent" v-bind="consoleProps" />
+      <component :is="currentComponent" v-bind="consoleProps" :key="`${currentView}-${consoleSection}`" />
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, defineAsyncComponent, watch, computed, provide } from 'vue';
+import { ref, defineAsyncComponent, watch, computed, provide, onUnmounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useWebSocket } from '../useWebSocket';
 
@@ -136,6 +141,8 @@ const wsApi = useWebSocket({
   get password() { return wsPassword.value; },
 });
 provide('wsApi', wsApi);
+provide('isRunning', isRunning);
+provide('isInConsole', isInConsole);
 
 // 连接状态相关的计算属性和方法
 const connectionStatus = computed(() => wsApi.connectionStatus.value);
@@ -159,6 +166,7 @@ function getStatusText() {
 }
 
 function manualReconnect() {
+  console.log('Manual reconnect triggered');
   reconnectAttempts.value = 0;
   wsApi.connect();
 }
@@ -244,39 +252,61 @@ function refreshServerStatus() {
 
 // 自动重连逻辑
 function attemptReconnect() {
-  if (reconnectAttempts.value < maxReconnectAttempts && (connectionStatus.value === 'failed' || connectionStatus.value === 'disconnected')) {
+  console.log('Attempting reconnect, attempts:', reconnectAttempts.value, 'max:', maxReconnectAttempts, 'status:', connectionStatus.value, 'isEnteringConsole:', isEnteringConsole);
+  
+  if (reconnectAttempts.value < maxReconnectAttempts && 
+      (connectionStatus.value === 'failed' || connectionStatus.value === 'disconnected') && 
+      !isEnteringConsole) {
     reconnectAttempts.value++;
+    console.log('Starting reconnect attempt', reconnectAttempts.value);
     setTimeout(() => {
       wsApi.connect();
     }, reconnectDelay);
+  } else {
+    console.log('Reconnect conditions not met, skipping reconnect');
   }
 }
 
 // 监听连接状态变化
-watch(connectionStatus, (status) => {
-  if ((status === 'failed' || status === 'disconnected') && isInConsole.value && reconnectAttempts.value < maxReconnectAttempts) {
+const connectionStatusWatcher = watch(connectionStatus, (status, oldStatus) => {
+  console.log('Connection status changed:', status, 'oldStatus:', oldStatus, 'isInConsole:', isInConsole.value, 'reconnectAttempts:', reconnectAttempts.value, 'isEnteringConsole:', isEnteringConsole);
+  
+  if ((status === 'failed' || status === 'disconnected') && isInConsole.value && reconnectAttempts.value < maxReconnectAttempts && !isEnteringConsole) {
+    console.log('Attempting automatic reconnect...');
     attemptReconnect();
   } else if (status === 'connected') {
     reconnectAttempts.value = 0;
-    // 连接成功后查询服务器状态
+    console.log('Connection established successfully, will query status in 2 seconds');
+    // 连接成功后查询服务器状态，增加延迟确保连接稳定
     setTimeout(() => {
       if (connectionStatus.value === 'connected') {
-        console.log('Connection established, querying server status'); // 调试日志
+        console.log('Connection established, querying server status (from Home.vue)'); // 调试日志
         wsApi.send({ command: 'status' });
+      } else {
+        console.log('Connection status changed before status query, skipping');
       }
-    }, 1000);
+    }, 2000); // 增加到2秒，确保连接稳定
   }
 });
 
 // 监听控制台状态变化，确保在进入控制台时能正确连接
-watch(isInConsole, (inConsole) => {
-  if (inConsole && connectionStatus.value === 'disconnected' && reconnectAttempts.value === 0) {
+const consoleStatusWatcher = watch(isInConsole, (inConsole, oldInConsole) => {
+  console.log('Console status changed:', inConsole, 'oldInConsole:', oldInConsole, 'connectionStatus:', connectionStatus.value, 'isEnteringConsole:', isEnteringConsole);
+  
+  // 只有在从false变为true，且连接状态为disconnected，且没有重连尝试，且不是通过enterConsole函数进入时才自动连接
+  if (inConsole && !oldInConsole && connectionStatus.value === 'disconnected' && reconnectAttempts.value === 0 && !isEnteringConsole) {
     // 首次进入控制台，尝试连接
+    console.log('First time entering console, attempting connection...');
     setTimeout(() => {
       wsApi.connect();
     }, 100);
   }
 });
+
+// 标记是否已经初始化过，避免重复连接
+let isInitialized = false;
+// 标记是否正在通过enterConsole函数进入控制台，避免重复连接
+let isEnteringConsole = false;
 
 watch(
   () => route.query,
@@ -288,7 +318,15 @@ watch(
         wsUrl: newQuery.wsUrl as string || '',
         password: newQuery.password as string || ''
       };
-      enterConsole(server);
+      
+      // 只有在不是初始化时才自动进入控制台
+      if (isInitialized) {
+        console.log('Route query changed, entering console for server:', server);
+        enterConsole(server);
+      } else {
+        console.log('Initial route query detected, but skipping auto-connect to avoid duplicate connections');
+        isInitialized = true;
+      }
     } else if (route.path !== '/dashboard') {
       isInConsole.value = false;
       wsApi.disconnect();
@@ -296,6 +334,19 @@ watch(
   },
   { immediate: true }
 );
+
+// 组件卸载时清理监听器
+onUnmounted(() => {
+  console.log('Home component unmounting, cleaning up watchers...');
+  if (connectionStatusWatcher) {
+    connectionStatusWatcher();
+  }
+  if (consoleStatusWatcher) {
+    consoleStatusWatcher();
+  }
+  // 断开WebSocket连接
+  wsApi.disconnect();
+});
 
 // wsApi.onMessage 全局分发终端消息
 wsApi.onMessage = (data: any) => {
@@ -322,10 +373,25 @@ wsApi.onMessage = (data: any) => {
     console.error('Server error:', data.error); // 调试日志
   }
   
-  // 分发到全局终端消息总线
+  // 分发到全局终端消息总线（过滤掉系统监控消息）
   if (window && (window as any).__TERMINAL_BUS__) {
-    console.log('Emitting to terminal bus:', data); // 调试日志
-    (window as any).__TERMINAL_BUS__.emit('terminal-message', data);
+    // 过滤掉系统监控、服务器信息和玩家列表消息，这些不应该在终端中显示
+    if (data && typeof data === 'object' && (data.systemInfo || data.serverInfo || data.players)) {
+      // 这些是系统监控和玩家管理消息，只发送给相应的组件，不发送到终端
+      console.log('System/Player monitoring message, not sending to terminal:', data);
+      // 发送到专门的消息总线，而不是终端总线
+      if ((window as any).__SYSTEM_BUS__) {
+        console.log('Home: Emitting to system bus:', data);
+        (window as any).__SYSTEM_BUS__.emit('system-message', data);
+      } else {
+        console.error('Home: SystemBus not available');
+      }
+      
+
+    } else {
+      console.log('Emitting to terminal bus:', data); // 调试日志
+      (window as any).__TERMINAL_BUS__.emit('terminal-message', data);
+    }
   } else {
     console.error('TerminalBus not available for message:', data);
   }
@@ -347,22 +413,32 @@ function showAppSettings() {
 }
 
 function enterConsole(server: any) {
-  currentServer.value = server;
-  isInConsole.value = true;
-  consoleSection.value = 'overview';
-  currentComponent.value = Overview as unknown as any;
-  wsUrl.value = server.wsUrl;
-  wsPassword.value = server.password;
+  console.log('Entering console for server:', server);
+  
+  // 标记正在通过enterConsole函数进入控制台
+  isEnteringConsole = true;
+  
+  // 先断开当前连接
+  wsApi.disconnect();
   
   // 重置重连状态和服务器状态
   reconnectAttempts.value = 0;
   isRunning.value = false; // 重置服务器运行状态
   
-  wsApi.disconnect();
+  // 更新服务器信息
+  currentServer.value = server;
+  wsUrl.value = server.wsUrl;
+  wsPassword.value = server.password;
+  
   // 重置控制台相关状态
   if (window && (window as any).__TERMINAL_BUS__) {
     (window as any).__TERMINAL_BUS__.emit('terminal-message', { status: 'stopped' });
   }
+  
+  // 设置控制台状态（这会触发consoleStatusWatcher，但我们已经修复了重复连接问题）
+  isInConsole.value = true;
+  consoleSection.value = 'overview';
+  currentComponent.value = Overview as unknown as any;
   
   // 延迟连接，确保状态重置完成
   setTimeout(() => {
@@ -376,7 +452,12 @@ function enterConsole(server: any) {
         (window as any).__TERMINAL_BUS__.emit('terminal-message', '正在连接到服务器...');
       }
     }, 500);
-  }, 100);
+    
+    // 连接完成后重置标记
+    setTimeout(() => {
+      isEnteringConsole = false;
+    }, 500);
+  }, 300); // 增加延迟时间，确保状态变化完成
 }
 
 function changeConsoleSection(section: string) {
@@ -657,6 +738,32 @@ const consoleProps = computed(() => {
 }
 
 .reconnect-btn:disabled {
+  background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+  cursor: not-allowed;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.connect-btn {
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 0.6rem 1rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  flex: 1;
+}
+
+.connect-btn:hover:not(:disabled) {
+  box-shadow: 0 4px 12px rgba(52, 152, 219, 0.4);
+}
+
+.connect-btn:disabled {
   background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
   cursor: not-allowed;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);

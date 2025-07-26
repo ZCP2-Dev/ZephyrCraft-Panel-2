@@ -44,4 +44,7 @@ class TerminalBus {
 // 初始化全局终端消息总线
 (window as any).__TERMINAL_BUS__ = new TerminalBus();
 
+// 初始化全局系统监控消息总线
+(window as any).__SYSTEM_BUS__ = new TerminalBus();
+
 createApp(App).use(router).mount("#app");

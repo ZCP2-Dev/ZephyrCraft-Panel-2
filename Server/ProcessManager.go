@@ -5,6 +5,7 @@ import (
 	"io"
 	"log"
 	"os/exec"
+	"strings"
 	"sync"
 
 	"github.com/gorilla/websocket"
@@ -14,20 +15,22 @@ import (
 // 负责控制外部程序（比如通过 pty-proxy.exe 启动的服务）的启停、命令交互，
 // 以及收集程序输出并通过 WebSocket 发给前端
 type ProcessManager struct {
-	cmd     *exec.Cmd       // 用于管理外部进程的命令对象，包含进程启动参数、运行状态等
-	stdout  io.ReadCloser   // 外部进程的标准输出管道，用于读取进程输出内容
-	stdin   io.WriteCloser  // 外部进程的标准输入管道，用于向前端进程发送命令
-	running bool            // 标记进程是否正在运行
-	mu      sync.Mutex      // 互斥锁，用于并发场景下保护进程相关状态（比如 running、cmd 等），避免竞争条件
-	conn    *websocket.Conn // 与前端通信的 WebSocket 连接，用于发送输出、状态等消息
+	cmd           *exec.Cmd       // 用于管理外部进程的命令对象，包含进程启动参数、运行状态等
+	stdout        io.ReadCloser   // 外部进程的标准输出管道，用于读取进程输出内容
+	stdin         io.WriteCloser  // 外部进程的标准输入管道，用于向前端进程发送命令
+	running       bool            // 标记进程是否正在运行
+	mu            sync.Mutex      // 互斥锁，用于并发场景下保护进程相关状态（比如 running、cmd 等），避免竞争条件
+	conn          *websocket.Conn // 与前端通信的 WebSocket 连接，用于发送输出、状态等消息
+	systemMonitor *SystemMonitor  // 系统监控器
 }
 
 // NewProcessManager 创建新的进程管理器
 // 初始化时传入 WebSocket 连接，后续用它给前端发消息
 func NewProcessManager(conn *websocket.Conn) *ProcessManager {
 	return &ProcessManager{
-		conn:    conn,  // 关联传入的 WebSocket 连接
-		running: false, // 初始时进程未运行
+		conn:          conn,               // 关联传入的 WebSocket 连接
+		running:       false,              // 初始时进程未运行
+		systemMonitor: GetSystemMonitor(), // 获取系统监控器实例
 	}
 }
 
@@ -70,8 +73,16 @@ func (pm *ProcessManager) StartProcess(serverPath string) error {
 
 	pm.running = true // 标记进程已启动运行
 
-	// 启动成功后推送 running 状态
-	pm.sendMessage(Message{Status: "running"})
+	// 清空玩家列表（服务器重启）
+	playerManager := GetPlayerManager()
+	playerManager.ClearPlayers()
+
+	// 启动成功后推送 running 状态（直接发送，不记录日志）
+	if pm.conn != nil {
+		if err := pm.conn.WriteJSON(Message{Status: "running"}); err != nil {
+			log.Printf("[ERROR]发送状态消息失败: %v", err)
+		}
+	}
 
 	// 异步启动一个 goroutine 读取进程输出，避免阻塞当前逻辑
 	go pm.readOutput()
@@ -103,8 +114,12 @@ func (pm *ProcessManager) StopProcess() error {
 	pm.stdin = nil
 	pm.running = false // 标记进程已停止
 
-	// 停止后推送 stopped 状态
-	pm.sendMessage(Message{Status: "stopped"})
+	// 停止后推送 stopped 状态（直接发送，不记录日志）
+	if pm.conn != nil {
+		if err := pm.conn.WriteJSON(Message{Status: "stopped"}); err != nil {
+			log.Printf("[ERROR]发送状态消息失败: %v", err)
+		}
+	}
 	return nil // 停止成功，返回 nil
 }
 
@@ -138,9 +153,51 @@ func (pm *ProcessManager) readOutput() {
 		if err != nil {
 			// 读取出错（比如进程退出、管道断开等），停止进程并返回
 			pm.StopProcess()
-			// 进程异常退出时推送 stopped 状态
-			pm.sendMessage(Message{Status: "stopped"})
+			// 进程异常退出时推送 stopped 状态（直接发送，不记录日志）
+			if pm.conn != nil {
+				if err := pm.conn.WriteJSON(Message{Status: "stopped"}); err != nil {
+					log.Printf("[ERROR]发送状态消息失败: %v", err)
+				}
+			}
 			return
+		}
+
+		// 将输出添加到系统监控器缓冲区
+		if pm.systemMonitor != nil {
+			pm.systemMonitor.AddOutputLine(line)
+		}
+
+		// 解析玩家事件
+		playerManager := GetPlayerManager()
+		playerEventDetected := playerManager.ParsePlayerEvent(line)
+
+		if playerEventDetected {
+			// 如果解析到玩家事件，发送更新后的玩家列表
+			players := playerManager.GetPlayers()
+			if isDebug {
+				log.Printf("[ProcessManager][DEBUG]玩家事件解析成功，当前玩家数: %d", len(players))
+			}
+			if pm.conn != nil {
+				if err := pm.conn.WriteJSON(Message{Players: players}); err != nil {
+					log.Printf("[ERROR]发送玩家列表失败: %v", err)
+				}
+			}
+		} else {
+			// 如果没有通过正则表达式检测到，但行包含退出关键词，尝试通用检测
+			if strings.Contains(strings.ToLower(line), "left") || strings.Contains(strings.ToLower(line), "disconnected") {
+				if isDebug {
+					log.Printf("[ProcessManager][DEBUG]尝试通用玩家退出检测")
+				}
+				// 重新解析一次，这次会触发通用检测
+				if playerManager.ParsePlayerEvent(line) {
+					players := playerManager.GetPlayers()
+					if pm.conn != nil {
+						if err := pm.conn.WriteJSON(Message{Players: players}); err != nil {
+							log.Printf("[ERROR]发送玩家列表失败: %v", err)
+						}
+					}
+				}
+			}
 		}
 
 		// 将读取到的一行输出，封装成 Message 结构体，通过 WebSocket 发给前端
@@ -153,7 +210,10 @@ func (pm *ProcessManager) readOutput() {
 func (pm *ProcessManager) sendMessage(msg Message) {
 	// WebSocket 连接为空，无法发送，直接返回
 	if pm.conn != nil {
-		log.Printf("%s", msg) // 记录发送的消息内容
+		// 只记录非系统信息的消息到日志
+		if msg.Output != "" || msg.Error != "" || msg.Status != "" {
+			log.Printf("%s", msg)
+		}
 		// 尝试通过 WebSocket 连接发送 JSON 格式消息
 		if err := pm.conn.WriteJSON(msg); err != nil {
 			// 发送失败，记录错误日志

@@ -29,6 +29,7 @@ declare module 'vue' {
     IconMdiFileDocument: typeof import('~icons/mdi/file-document')['default']
     IconMdiHome: typeof import('~icons/mdi/home')['default']
     IconMdiLoading: typeof import('~icons/mdi/loading')['default']
+    IconMdiMessage: typeof import('~icons/mdi/message')['default']
     IconMdiMicrophoneOff: typeof import('~icons/mdi/microphone-off')['default']
     IconMdiPalette: typeof import('~icons/mdi/palette')['default']
     IconMdiPencil: typeof import('~icons/mdi/pencil')['default']
