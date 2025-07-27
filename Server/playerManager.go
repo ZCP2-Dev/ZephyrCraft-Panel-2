@@ -86,7 +86,9 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 	// 玩家连接事件的正则表达式
 	// 匹配格式: "12:19:34.368 INFO [Server] Player connected: win81pro, xuid: 2535421504983964"
 	connectedRegex := regexp.MustCompile(`Player connected:\s*([^,]+)(?:,\s*xuid:\s*([^\s]+))?`)
-	connectedRegex4 := regexp.MustCompile(`Player Spawned:\s*([^,]+)(?:,\s*xuid:\s*([^\s]+))?`)
+	// 玩家生成事件的正则表达式
+	// 匹配格式: "14:19:11.664 INFO [Server] Player Spawned: LiteZero2614929 xuid: 2535451043182905, pfid: bc8f95ca6b684025"
+	connectedRegex4 := regexp.MustCompile(`Player Spawned:\s*([^\s]+)\s+xuid:\s*([^\s,]+)`)
 
 	// 玩家断开事件的正则表达式
 	// 匹配格式: "12:20:27.624 INFO [Server] Player disconnected: win81pro, xuid: 2535421504983964, pfid: c1e893d6b8ec3e71"
@@ -129,7 +131,7 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 		}
 
 		if isDebug {
-			log.Printf("[调试] 匹配到玩家连接: 玩家名=%s, XUID=%s", playerName, xuid)
+			log.Printf("[PlayerManager][DEBUG]检测到玩家生成事件: %s (XUID: %s)", playerName, xuid)
 		}
 
 		if xuid != "" {
@@ -303,7 +305,7 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 }
 
 func (pm *PlayerManager) sendMessage(s string, name string, xuid string, reason string) {
-	panic("unimplemented")
+	//panic("unimplemented")
 }
 
 // 新增kickPlayer方法
