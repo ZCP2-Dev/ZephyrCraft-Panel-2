@@ -1,123 +1,44 @@
-# ZephyrCraft Panel 2
+# ZephyrCraft Panel 2 
 
-一个基于 Tauri + Vue 3 + Go 的 Minecraft Bedrock 服务器管理面板。
+![ZephyrCraft-Panel-2](https://socialify.git.ci/Litezero/ZephyrCraft-Panel-2/image?description=1&forks=1&issues=1&logo=https%3A%2F%2Fooo.0x0.ooo%2F2025%2F07%2F25%2FOYYVSK.png&name=1&pattern=Circuit+Board&pulls=1&stargazers=1&theme=Auto)
 
-## 🚀 新功能
+### 🍃轻若微风
 
-### 1. 完整的ANSI颜色支持
-- 终端现在支持完整的ANSI转义序列
-- 支持Windows 10+ CMD的所有颜色和格式
-- 支持256色模式和RGB真彩色
-- 支持文本格式：粗体、斜体、下划线、删除线、闪烁等
+⚠前排提示：此项目是一个新人主导开发的，代码中可能包括但不限于：
 
-### 2. 实时系统监控
-- **CPU使用率**：实时显示系统CPU占用
-- **内存使用**：显示内存使用量和总内存
-- **磁盘使用**：显示磁盘空间使用情况
-- **系统运行时间**：显示系统启动后的运行时间
+1.令人血压升高的功能实现方法
 
-### 3. 服务器状态监控
-- **在线玩家数**：实时显示当前在线玩家
-- **服务器TPS**：显示服务器每秒刻数
-- **服务器版本**：自动检测服务器版本
-- **启动时间**：记录服务器启动时间
+2.毫无章法格式的代码
 
-### 4. 增强的控制台功能
-- **概览页面**：显示完整的系统和服务器状态
-- **核心设置**：服务器控制和快速操作
-- **玩家管理**：实时玩家列表和玩家操作
-- **终端控制台**：支持彩色输出的完整终端
+### 🌟项目展示
+> 📷截图展示
+<details>
+  <summary>点击展开  ⚠多图预警，请确保您没有使用计费连接或数据余量充足</summary>
 
-## 🛠️ 技术栈
+  ![Settings](./Resources/Screenshoots/Pannel_Settings.png)
+  ![ServerList](./Resources/Screenshoots/Pannel_ServerList.png)
+  ![Console_Overview](./Resources/Screenshoots/Pannel_Console_Overview.png)
+  ![Console_Terminal](./Resources/Screenshoots/Pannel_Console_Terminal.png)
+  ![Console_Players](./Resources/Screenshoots/Pannel_Console_Players.png)
+  ![Console_Files](./Resources/Screenshoots/Pannel_Console_Files_2.png)
+  ![Console_Remote](./Resources/Screenshoots/Pannel_Console_Romote.png)
+</details>
 
-### 前端
-- **Tauri** - 桌面应用框架
-- **Vue 3** - 前端框架
-- **TypeScript** - 类型安全
-- **Vite** - 构建工具
+### 🗂️仓库结构说明
 
-### 后端
-- **Go** - 后端语言
-- **WebSocket** - 实时通信
-- **gopsutil** - 系统监控
-- **Gorilla WebSocket** - WebSocket库
+文件夹名称|作用|主要使用的编程语言
+:---:|:---:|:---:
+[Client](https://github.com/Litezero/ZephyrCraft-Panel-2/tree/main/Client/Tauri)|用于存放前端（客户端）项目的相关文件|[![-](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)]() [![-](https://img.shields.io/badge/Vue-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)]() 
+[Server](https://github.com/Litezero/ZephyrCraft-Panel-2/tree/main/Server)|用于存放后端（服务端）项目的相关文件|[![-](https://img.shields.io/badge/Golang-00ADD8?style=flat-square&logo=go&logoColor=white)]() 
+Docs|（筹备中，可能取消）存储项目文档|[![-](https://img.shields.io/badge/Markdown-000000?style=flat-square&logo=markdown&logoColor=white)]() 
 
-## 📦 安装和运行
+### 🏆Credits
+此项目中使用了一些其他的开源项目成果，在下方已标出以表示感谢：
 
-### 后端 (Go)
-```bash
-cd Server
-go mod tidy
-go build -o Server.exe .
-./Server.exe
-```
+[https://github.com/gorilla/websocket](https://github.com/gorilla/websocket) 用于在golang中实现websocket链接操作
 
-### 前端 (Tauri)
-```bash
-cd Client/Tauri
-npm install
-npm run dev
-```
+[https://github.com/XY0797/pty-proxy](https://github.com/XY0797/pty-proxy) 用于创建伪终端以实现输出操作
 
-## 🔧 配置
+另外，感谢以下项目为我们提供各种各样的支持：
 
-编辑 `Server/Panel_Setting/config.json`：
-```json
-{
-    "port": ":1145",
-    "ServerPath": "C:\\path\\to\\your\\bedrock_server.exe"
-}
-```
-
-## 🎨 功能特性
-
-### 终端颜色支持
-- 支持所有标准ANSI颜色代码
-- 支持256色模式
-- 支持RGB真彩色
-- 支持文本格式和特效
-
-### 系统监控
-- 实时CPU使用率监控
-- 内存使用情况
-- 磁盘空间监控
-- 系统运行时间
-
-### 服务器管理
-- 一键启动/停止服务器
-- 实时玩家管理
-- 服务器状态监控
-- 快速命令执行
-
-## 🔄 实时更新
-
-所有页面都支持实时数据更新：
-- 系统状态每5秒自动刷新
-- 服务器信息实时同步
-- 玩家列表自动更新
-- 终端输出实时显示
-
-## 🎯 使用说明
-
-1. **启动后端**：运行Go服务器程序
-2. **启动前端**：运行Tauri应用
-3. **连接服务器**：在设置中配置服务器路径
-4. **开始管理**：使用各个功能模块管理服务器
-
-## 📝 更新日志
-
-### v2.0.0
-- ✅ 完整的ANSI颜色支持
-- ✅ 实时系统监控
-- ✅ 服务器状态监控
-- ✅ 增强的控制台功能
-- ✅ 玩家管理功能
-- ✅ 实时数据更新
-
-## 🤝 贡献
-
-欢迎提交Issue和Pull Request！
-
-## �� 许可证
-
-MIT License
+[Uniteban](http://uniteban.xyz:19132) 提供云黑相关接口支持
