@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"log"
 	"net/http"
 	"regexp"
@@ -86,7 +87,9 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 	// 玩家连接事件的正则表达式
 	// 匹配格式: "12:19:34.368 INFO [Server] Player connected: win81pro, xuid: 2535421504983964"
 	connectedRegex := regexp.MustCompile(`Player connected:\s*([^,]+)(?:,\s*xuid:\s*([^\s]+))?`)
-	connectedRegex4 := regexp.MustCompile(`Player Spawned:\s*([^,]+)(?:,\s*xuid:\s*([^\s]+))?`)
+	// 玩家生成事件的正则表达式
+	// 匹配格式: "14:19:11.664 INFO [Server] Player Spawned: LiteZero2614929 xuid: 2535451043182905, pfid: bc8f95ca6b684025"
+	connectedRegex4 := regexp.MustCompile(`Player Spawned:\s*([^\s]+)\s+xuid:\s*([^\s,]+)`)
 
 	// 玩家断开事件的正则表达式
 	// 匹配格式: "12:20:27.624 INFO [Server] Player disconnected: win81pro, xuid: 2535421504983964, pfid: c1e893d6b8ec3e71"
@@ -129,7 +132,7 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 		}
 
 		if isDebug {
-			log.Printf("[调试] 匹配到玩家连接: 玩家名=%s, XUID=%s", playerName, xuid)
+			log.Printf("[PlayerManager][DEBUG]检测到玩家生成事件: %s (XUID: %s)", playerName, xuid)
 		}
 
 		if xuid != "" {
@@ -198,16 +201,15 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 
 					if config.Uniteban {
 						log.Printf("[Uniteban] 玩家 %s (XUID: %s) 在云黑名单中，踢出，理由: %s", name, xuid, reason)
-						pm.kickPlayer(name, "你因为在uniteban云黑系统中因理由: "+reason+" 被踢出游戏。")
-						pm.sendMessage("[Uniteban] 玩家 %s (XUID: %s) 在云黑名单中，踢出，理由: %s", name, xuid, reason)
-
+						pm.kickPlayer(name, "\n你因为在uniteban云黑系统中因理由: "+reason+" 被踢出游戏。")
+						getProcessManager().sendMessage(Message{Content: fmt.Sprintf("[Uniteban] 玩家 %s (XUID: %s) 在云黑名单中，但因配置原因未自动踢出！", name, xuid)})
 						if isDebug {
 							log.Printf("[调试] 已执行踢人操作并发送广播")
 						}
 					} else {
 						log.Printf("[Uniteban][警告] 玩家 %s (XUID: %s) 在云黑名单中，但因配置原因未自动踢出！", name, xuid)
 						pm.AddPlayer(name, xuid+"_危险玩家(云黑)")
-						pm.sendMessage("[Uniteban][警告] 玩家 %s (XUID: %s) 在云黑名单中，但因配置原因未自动踢出！", name, xuid, "")
+						getProcessManager().sendMessage(Message{Content: fmt.Sprintf("[Uniteban] 玩家 %s (XUID: %s) 在云黑名单中，但因配置原因未自动踢出！", name, xuid)})
 
 						if isDebug {
 							log.Printf("[调试] 未执行踢人操作，已添加标记并发送警告广播")
@@ -300,10 +302,6 @@ func (pm *PlayerManager) ParsePlayerEvent(line string) bool {
 	}
 
 	return false
-}
-
-func (pm *PlayerManager) sendMessage(s string, name string, xuid string, reason string) {
-	panic("unimplemented")
 }
 
 // 新增kickPlayer方法
