@@ -47,6 +47,6 @@
 
 [https://github.com/XY0797/pty-proxy](https://github.com/XY0797/pty-proxy) 用于创建伪终端以实现输出操作
 
-另外，感谢以下项目为我们提供各种各样的支持：
+另外，感谢以下项目为我们提供支持：
 
 [Uniteban](http://uniteban.xyz:19132) 提供云黑相关接口支持
