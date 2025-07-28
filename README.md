@@ -33,7 +33,8 @@
 文件夹名称|作用|主要使用的编程语言
 :---:|:---:|:---:
 [Client](https://github.com/Litezero/ZephyrCraft-Panel-2/tree/main/Client/Tauri)|用于存放前端（客户端）项目的相关文件|[![-](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)]() [![-](https://img.shields.io/badge/Vue-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)]() 
-[Server](https://github.com/Litezero/ZephyrCraft-Panel-2/tree/main/Server)|用于存放后端（服务端）项目的相关文件|[![-](https://img.shields.io/badge/Golang-00ADD8?style=flat-square&logo=go&logoColor=white)]() 
+[Server_BE](https://github.com/Litezero/ZephyrCraft-Panel-2/tree/main/Server_BE)|用于存放基岩版后端（服务端）项目的相关文件|[![-](https://img.shields.io/badge/Golang-00ADD8?style=flat-square&logo=go&logoColor=white)]() 
+[Server_JE](https://github.com/ZCP2-Dev/ZephyrCraft-Panel-2/tree/main/Server_JE)|用于存放Java版后端（服务端）项目的相关文件|[![-](https://img.shields.io/badge/Java-FFFFFF?style=flat-square&logo=Java&logoColor=white)]() 
 
 
 ### ▶️开始使用！
