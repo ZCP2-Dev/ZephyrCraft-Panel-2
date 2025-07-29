@@ -34,8 +34,8 @@
 :---:|:---:|:---:
 本仓库|项目的主仓库，存放开发者文档和发布版本（Releases）|-
 [Client](https://github.com/ZCP2-Dev/Client)|用于进行前端（客户端）项目的相关开发|[![-](https://img.shields.io/badge/Rust-000000?style=flat-square&logo=rust&logoColor=white)]() [![-](https://img.shields.io/badge/Vue-4FC08D?style=flat-square&logo=vuedotjs&logoColor=white)]() 
-[Server-Java](https://github.com/ZCP2-Dev/Server-Java)|用于进行Java版后端（服务端）项目的相关开发|[![-](https://img.shields.io/badge/Golang-00ADD8?style=flat-square&logo=go&logoColor=white)]() 
-[Server-BDS](https://github.com/ZCP2-Dev/Server-BDS)|用于进行Java版后端（服务端）项目的相关开发|[![-](https://img.shields.io/badge/Java-FFFFFF?style=flat-square&logo=Java&logoColor=white)]() 
+[Server-BDS](https://github.com/ZCP2-Dev/Server-BDS)|用于进行基岩版版后端（服务端）项目的相关开发|[![-](https://img.shields.io/badge/Golang-00ADD8?style=flat-square&logo=go&logoColor=white)]() 
+[Server-Java](https://github.com/ZCP2-Dev/Server-Java)|用于进行Java版后端（服务端）项目的相关开发|[![-](https://img.shields.io/badge/Java-FFFFFF?style=flat-square&logo=Java&logoColor=white)]() 
 
 
 ### ▶️如何使用！
